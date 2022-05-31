@@ -1,2 +1,2 @@
 # magfli
-Magnetic Field Line Tracer
+MAGnetic Field LIne (magfli) tracer
