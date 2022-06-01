@@ -157,9 +157,9 @@ def dipole_earth_cartesian_regular_grid(Xmax, grid_spacing):
     for i in range(shape[0]):
         for j in range(shape[1]):
             for k in range(shape[2]):
-                [Bx[i,j,k], By[i,j,k], Bz[i,j,k]] = dipole_earth_cartesian([xg[i,j,k], yg[i,j,k], zg[i,j,k]])
+                Bx[i,j,k], By[i,j,k], Bz[i,j,k] = dipole_earth_cartesian([xg[i,j,k], yg[i,j,k], zg[i,j,k]])
     
-    return [x, y, z, Bx, By, Bz]
+    return x, y, z, Bx, By, Bz
 
 def dipole_earth_cartesian_unstructured(Xmax, num_pts, seed=12345):
     """Create unstructured, randomly spaced grid containing dipole magnetic 
@@ -196,9 +196,9 @@ def dipole_earth_cartesian_unstructured(Xmax, num_pts, seed=12345):
         x[i] = -Xmax[0] + 2*Xmax[0] * rng.random()
         y[i] = -Xmax[1] + 2*Xmax[1] * rng.random()
         z[i] = -Xmax[2] + 2*Xmax[2] * rng.random()
-        [Bx[i], By[i], Bz[i]] = dipole_earth_cartesian([x[i], y[i], z[i]])
+        Bx[i], By[i], Bz[i] = dipole_earth_cartesian([x[i], y[i], z[i]])
       
-    return [x, y, z, Bx, By, Bz]
+    return x, y, z, Bx, By, Bz
 
 if __name__ == "__main__":
     dipole_earth_cartesian_unstructured([5,5,5],10)

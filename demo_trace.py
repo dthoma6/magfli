@@ -159,7 +159,8 @@ def demo_two_traces():
     
 def demo_trace_regular_grid():
     """Demo function to trace one field line for a simple dipole model of earth's
-    magnetic field specific in a regular grid. Solution must be outside of earth (i.e., r>1)
+    magnetic field specified in a regular grid. Solution must be outside of 
+    earth (i.e., r>1)
 
     Inputs
     -------
