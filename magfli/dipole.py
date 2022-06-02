@@ -7,6 +7,7 @@ Created on Sun May 22 10:15:15 2022
 """
 
 import numpy as np
+import logging
 
 def dipole_earth_spherical(r, theta, phi):
     """Calculate earth's magnetic field in spherical coordinates based on a 
@@ -132,6 +133,9 @@ def dipole_earth_cartesian_regular_grid(Xmax, grid_spacing):
             -> +Xmax[1], and z => -Xmax[2] -> +Xmax[2]
         grid_spacing = distance between points along x, y, or z
         
+        Note: Xmax values may be changed by algorithm to avoid the origin, which
+        causes a divide by zero condition when calculating the B field
+        
     Outputs:
         x[], y[], z[] = magnetic field vector determined at points x,y,z
         Bx[], By[], Bz[] = magnetic field vector arrays
@@ -139,10 +143,21 @@ def dipole_earth_cartesian_regular_grid(Xmax, grid_spacing):
     
     # Determine domain for x,y,z
     # Note, we want to avoid the origin, which causes a divide by zero
-    # condition when calculating the B field.  So, we we start at -Xmax+0.5
-    x = np.arange(-Xmax[0]+0.5, Xmax[0], grid_spacing)
-    y = np.arange(-Xmax[1]+0.5, Xmax[1], grid_spacing)
-    z = np.arange(-Xmax[2]+0.5, Xmax[2], grid_spacing)
+    # condition when calculating the B field.  So we adjust if necessary
+    # by adding half the grid_spacing
+    xdel = ydel = zdel =0
+    if( np.mod(Xmax[0],grid_spacing) == 0 ): 
+        logging.info('Modifying Xmax[0] to avoid origin')
+        xdel = grid_spacing/2
+    if( np.mod(Xmax[1],grid_spacing) == 0 ): 
+        logging.info('Modifying Xmax[1] to avoid origin')
+        ydel = grid_spacing/2
+    if( np.mod(Xmax[2],grid_spacing) == 0 ): 
+        logging.info('Modifying Xmax[2] to avoid origin')
+        zdel = grid_spacing/2
+    x = np.arange(-Xmax[0]+xdel, Xmax[0], grid_spacing)
+    y = np.arange(-Xmax[1]+ydel, Xmax[1], grid_spacing)
+    z = np.arange(-Xmax[2]+zdel, Xmax[2], grid_spacing)
     
     # Create mesh grid
     xg, yg, zg = np.meshgrid(x, y, z, indexing='ij')
@@ -201,4 +216,4 @@ def dipole_earth_cartesian_unstructured(Xmax, num_pts, seed=12345):
     return x, y, z, Bx, By, Bz
 
 if __name__ == "__main__":
-    dipole_earth_cartesian_unstructured([5,5,5],10)
+    dipole_earth_cartesian_regular_grid([5,5,5],1)
