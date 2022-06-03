@@ -39,7 +39,7 @@ def timing_vary_unstructured_params(num_pts=100000, tolerance=1e-5,
     X0 = [ 1/2, 1/2, 1/np.sqrt(2) ]
     
     # Get the regular grid defining the magnetic field
-    [x, y, z, Bx, By, Bz] = mf.dipole_earth_cartesian_unstructured([5,5,5],num_pts)
+    x, y, z, Bx, By, Bz = mf.dipole_earth_cartesian_unstructured([5,5,5],num_pts)
     
     start = time.time()
 
@@ -146,5 +146,5 @@ def timing_trace_plots():
     return
 
 if __name__ == "__main__":
-    #timing_trace_unstructured()
-    timing_trace_plots()
+    timing_trace_unstructured()
+    #timing_trace_plots()
