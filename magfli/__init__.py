@@ -16,7 +16,7 @@ from .dipole import dipole_earth_spherical, dipole_earth_cartesian, \
     dipole_mag_line_spherical, dipole_mag_line_delta_cartesian, \
     dipole_earth_cartesian_regular_grid, dipole_earth_cartesian_unstructured
 from .trace import trace_stop_earth, \
-    trace_stop_box, trace_stop_earth_box, trace_stop_none, \
-    trace_field_line_cartesian_function, \
-    trace_field_line_cartesian_regular_grid, \
-    trace_field_line_cartesian_unstructured
+    trace_stop_box, trace_stop_earth_box, trace_stop_none
+from .multitrace import multitrace_cartesian_function, \
+    multitrace_cartesian_regular_grid, \
+    multitrace_cartesian_unstructured

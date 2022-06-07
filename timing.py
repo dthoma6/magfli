@@ -9,14 +9,12 @@ Created on Tue May 31 16:53:54 2022
 import magfli as mf
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import logging
 import time
 
 def timing_vary_unstructured_params(num_pts=100000, tolerance=1e-5,
                                     grid=0.1,
-                                    method_ode='RK23', 
-                                    method_interp='linear'):
+                                    method_o='RK23', 
+                                    method_i='linear'):
 
     """Routine used to evaluate how long it takes to trace a magnetic field
     line as a function of various parameters.
@@ -42,16 +40,21 @@ def timing_vary_unstructured_params(num_pts=100000, tolerance=1e-5,
     x, y, z, Bx, By, Bz = mf.dipole_earth_cartesian_unstructured([5,5,5],num_pts)
     
     start = time.time()
-
-   # Trace field line
-    field_line = mf.trace_field_line_cartesian_unstructured( X0, x, y, z, Bx, By, Bz,
-                                   Stop_Function = mf.trace_stop_earth, 
-                                   forward = False, tol = tolerance, 
-                                   grid_spacing = grid, max_length = 5, 
-                                   method_ode = 'RK23', method_interp = 'linear' )
- 
-    elapsed = time.time() - start
     
+    # Setup multitrace
+    mt = mf.multitrace_cartesian_unstructured( x, y, z, Bx, By, Bz,
+                                   Stop_Function = mf.trace_stop_earth, 
+                                   tol = tolerance, 
+                                   grid_spacing = grid, 
+                                   max_length = 5, 
+                                   method_ode = method_o, 
+                                   method_interp = method_i )
+    
+    # Trace field line
+    field_line = mt.trace_field_line( X0, False )
+    
+    elapsed = time.time() - start
+
     # Calculate RMS difference from analytic solution
     shape = np.shape(field_line)
     diffs = np.zeros(shape[1])
@@ -98,8 +101,8 @@ def timing_trace_unstructured():
                         elapsed, rms = timing_vary_unstructured_params(num_pts=10**pts, 
                                             tolerance=10**(-tol),
                                             grid=10**(-grid_space),
-                                            method_ode=meth_ode, 
-                                            method_interp=meth_interp)
+                                            method_o=meth_ode, 
+                                            method_i=meth_interp)
                         
                         results.loc[len(results.index)] = [elapsed, rms, pts, -tol, -grid_space, 
                                                                  meth_ode, meth_interp]
@@ -147,4 +150,4 @@ def timing_trace_plots():
 
 if __name__ == "__main__":
     timing_trace_unstructured()
-    #timing_trace_plots()
+    timing_trace_plots()
