@@ -36,12 +36,13 @@ def timing_vary_unstructured_params(num_pts=100000, tolerance=1e-5,
     # Point where trace begins    
     X0 = [ 1/2, 1/2, 1/np.sqrt(2) ]
     
-    # Get the regular grid defining the magnetic field
+    # Get the unstructured grid defining the magnetic field
     x, y, z, Bx, By, Bz = mf.dipole_earth_cartesian_unstructured([5,5,5],num_pts)
     
     start = time.time()
     
     # Setup multitrace
+    # Requires trace be outside the earth (see mf.trace_stop_earth)
     mt = mf.multitrace_cartesian_unstructured( x, y, z, Bx, By, Bz,
                                    Stop_Function = mf.trace_stop_earth, 
                                    tol = tolerance, 
@@ -69,9 +70,8 @@ def timing_vary_unstructured_params(num_pts=100000, tolerance=1e-5,
 def timing_trace_unstructured():
     """Timing function that determines elapsed time to trace one field line.
     Elapsed time is for a simple dipole model of earth's magnetic field 
-    specified in an unstructured set of points. Solution must be outside of 
-    earth (i.e., r>1).  The function will vary the parameters of the tracing
-    function is determine how elapsed time changes.
+    specified in an unstructured set of points. The function will vary the 
+    parameters of the tracing function to determine how elapsed time changes.
 
     Inputs
     -------

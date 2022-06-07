@@ -177,7 +177,7 @@ def dipole_earth_cartesian_regular_grid(Xmax, grid_spacing):
     return x, y, z, Bx, By, Bz
 
 def dipole_earth_cartesian_unstructured(Xmax, num_pts, seed=12345):
-    """Create unstructured, randomly spaced grid containing dipole magnetic 
+    """Create unstructured, randomly-spaced grid containing dipole magnetic 
     field at x,y,z points. Result is a 3D grid that is centered on origin 
     containing vector values of magnetic field, B.
     

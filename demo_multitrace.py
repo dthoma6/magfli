@@ -9,11 +9,10 @@ import magfli as mf
 import numpy as np
 import matplotlib.pyplot as plt
 import logging
-import time
 
 def demo_trace_function():
     """Demo function to trace one field line for a simple dipole model of earth's
-    magnetic field. Solution must be inside box with corners Xmin and Xmax
+    magnetic field. Solution must be outside of earth (i.e., r>1)
 
     Inputs
     -------
@@ -28,9 +27,9 @@ def demo_trace_function():
     X0 = [ 1/2, 1/2, 1/np.sqrt(2) ]
     
     # Opposite corners of box bounding domain for solution
-    # This box is used in this demo.  We use trace_stop_box that only
-    # considers whether the trace is inside of the box, and ignores the earth.
-    Xmin = [-100,-100,100]
+    # This box is ignored in this demo.  We use trace_stop_earth that only
+    # considers whether the trace outside the earth.
+    Xmin = [-100,-100,-100]
     Xmax = [100,100,100]
     
     # Setup multitrace
@@ -131,7 +130,7 @@ def demo_trace_unstructured():
     # Point where trace begins    
     X0 = [ 1/2, 1/2, 1/np.sqrt(2) ]
     
-    # Get the regular grid defining the magnetic field
+    # Get the unstructured array defining the magnetic field
     X, Y, Z, Bx, By, Bz = mf.dipole_earth_cartesian_unstructured([5,5,5],100000)
     
     # Setup multitrace

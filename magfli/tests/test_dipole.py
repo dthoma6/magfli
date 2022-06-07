@@ -20,7 +20,6 @@ from ..multitrace import multitrace_cartesian_function, \
 def test_dipole_fields():
     """Compare results from dipole_earth_cartsian and dipole_earth_spherical
  
-    
     Inputs
     -------
     None.
@@ -59,6 +58,8 @@ def test_dipole_fields():
     assert( np.isclose( Bz, Bzp, 1e-5 ) )
     
     logging.info('Successful dipole field test')
+    
+    return
     
 def test_dipole_function_trace():
     """Compare result from numerically tracing one field line for a simple 
@@ -102,6 +103,8 @@ def test_dipole_function_trace():
     assert( rms_diffs < 1e-4 )
     
     logging.info('Successful function dipole trace test')
+    
+    return
 
 def test_dipole_regular_grid_trace():
     """Compare result from numerically tracing one field line for a simple 
@@ -185,3 +188,5 @@ def test_dipole_unstructured_trace():
     assert( rms_diffs < 6e-2 )
     
     logging.info('Successful unstructured grid dipole trace test')
+
+    return

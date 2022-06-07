@@ -9,7 +9,6 @@ Created on Sat May 28 16:42:11 2022
 import magfli as mf
 import numpy as np
 import matplotlib.pyplot as plt
-import logging
 import time
 
 def demo_two_traces():
@@ -41,13 +40,13 @@ def demo_two_traces():
     # Point where first trace begins
     X0 = [ 1/2, 1/2, 1/np.sqrt(2) ]
     
-    # Trace first field line
+    # Trace first field line.  Note, forward = False so field line is r > 1.
     field_line1 = mt.trace_field_line( X0, False )
     
     # Second point where trace begins
     X0 = [ 1/np.sqrt(2), 0, 1/np.sqrt(2) ]
     
-    # Trace second field line
+    # Trace second field line.  Again, forward = False.
     field_line2 = mt.trace_field_line( X0, False )
         
     # Plot field lines
@@ -79,7 +78,7 @@ def demo_trace_dipole_earth_function():
 
     """
     # Opposite corners of box bounding domain for solution
-    # This box is used in this demo.  We use trace_stop_earth)box that only
+    # This box is used in this demo.  We use trace_stop_earth_box that
     # considers whether the trace is outside the earth and inside of the box.
     Xmin = [-6,-3,-3]
     Xmax = [6,3,3]
@@ -225,12 +224,13 @@ def demo_trace_dipole_earth_unstructured():
 
     """
     # Opposite corners of box bounding domain for solution
-    # This box is used in this demo.  We use trace_stop_earth)box that only
+    # This box is used in this demo.  We use trace_stop_earth)box that 
     # considers whether the trace is outside the earth and inside of the box.
     Xmin = [-6,-3,-3]
     Xmax = [6,3,3]
     
-    # Get the regular grid defining the magnetic field
+    # Get the unstructured grid defining the magnetic field, grid contains
+    # num_pts
     num_pts = 100000
     X, Y, Z, Bx, By, Bz = mf.dipole_earth_cartesian_unstructured(Xmax,num_pts)
     
@@ -252,7 +252,7 @@ def demo_trace_dipole_earth_unstructured():
 
     # We'll walk around northern hemisphere in 20 degree increments
     # Note: forward has to be False in northern hemisphere for the call to 
-    # trace_field_line...
+    # trace_field_line... so that the field line trace goes away from the earth
     
     # Setup multitrace
     mt = mf.multitrace_cartesian_unstructured( X, Y, Z, Bx, By, Bz,
@@ -286,7 +286,7 @@ def demo_trace_dipole_earth_unstructured():
         for long in longitude:
             # Point where trace begins
             X0 = [ np.cos(long)*np.sin(col), np.sin(long)*np.sin(col), np.cos(col) ]
-            # Trace field line
+            # Trace field line.  As noted above, forward = False
             field_line = trace_and_plot(False)
             # Identified terminated field lines, i.e. r > 1 (outside earth)
             if( np.linalg.norm( field_line[:,-1] ) > 1. ):
@@ -294,7 +294,8 @@ def demo_trace_dipole_earth_unstructured():
             
     # We'll walk around southern hemisphere filling in the field lines from
     # the northern hemisphere that terminated before returning to earth 
-    # Note: forward has to be True in southern hemisphere
+    # Note: forward has to be True in southern hemisphere.  Going forward
+    # heads away from the earth
     
     for X0 in southern:
         # Trace field line
@@ -359,8 +360,8 @@ def demo_trace_dipole_earth_unstructured():
     return
             
 def demo_trace_dipole_earth_unstructured_file():
-    """Demo function to trace multiple field lines for a simple dipole model 
-    of earth's magnetic field specified by an unstructured grid from a
+    """Demo function to trace multiple field lines for a model of the  
+    earth's magnetic field specified by an unstructured grid from a
     SWMF output file.  Solution must be outside of earth (i.e., r>1) and within 
     the box bounding the domain. Start points for the field line will be 
     distributed over the earth and the bounding box.
@@ -377,13 +378,14 @@ def demo_trace_dipole_earth_unstructured_file():
     from os.path import exists
     import swmfio as swmfio
 
+    # Location of SWMF file
     tmpdir = '/Volumes/Physics HD/runs/DIPTSUR2/GM/IO2/'
     filebase = '3d__var_2_e20190902-041400-000'
         
     print("Reading " + tmpdir + filebase + ".{tree, info, out}")
     batsclass = swmfio.read_batsrus(tmpdir + filebase)
     
-    # Get x, y, z and Bx, By, Bz
+    # Get x, y, z and Bx, By, Bz from file
     var_dict = dict(batsclass.varidx)
     X = batsclass.data_arr[:,var_dict['x']][:]
     Y = batsclass.data_arr[:,var_dict['y']][:]
@@ -394,10 +396,8 @@ def demo_trace_dipole_earth_unstructured_file():
     Bz = batsclass.data_arr[:,var_dict['bz']][:]
 
     # Opposite corners of box bounding domain for solution
-    # This box is used in this demo.  We use trace_stop_earth)box that only
+    # This box is used in this demo.  We use trace_stop_earth_box that 
     # considers whether the trace is outside the earth and inside of the box.
-    # Xmin = [batsclass.xGlobalMin, batsclass.yGlobalMin, batsclass.zGlobalMin]
-    # Xmax = [batsclass.xGlobalMax, batsclass.yGlobalMax, batsclass.zGlobalMax]  
     Xmin = [min(X), min(Y), min(Z)]
     Xmax = [max(X), max(Y), max(Z)]
     
@@ -423,7 +423,7 @@ def demo_trace_dipole_earth_unstructured_file():
 
     # We'll walk around northern hemisphere in 20 degree increments
     # Note: forward has to be False in northern hemisphere for the call to 
-    # trace_field_line...
+    # trace_field_line... so that the field line trace goes away from the earth
     
     # Setup multitrace
     mt = mf.multitrace_cartesian_unstructured( X, Y, Z, Bx, By, Bz,
@@ -466,17 +466,17 @@ def demo_trace_dipole_earth_unstructured_file():
             
     # We'll walk around southern hemisphere filling in the field lines from
     # the northern hemisphere that terminated before returning to earth 
-    # Note: forward has to be True in southern hemisphere
+    # Note: forward has to be True in southern hemisphere to head away from the
+    # earth
     
     for X0 in southern:
         # Trace field line
         trace_and_plot(True)
         cnt += 1
 
-    
     # Walk across surface of bounding box defined by Xmin and Xmax.  Trace field
     # lines coming in through the surface.  Start by defining x,y,z arrays 
-    # defining points those surfaces, ignoring the edges.  Loop through the arrays
+    # defining points on the surfaces, ignoring the edges.  Loop through the arrays
     
     x = np.linspace(int(Xmin[0]+1),int(Xmax[0]-1),int((Xmax[0]-Xmin[0]-1)/40))
     y = np.linspace(int(Xmin[1]+1),int(Xmax[1]-1),int((Xmax[1]-Xmin[1]-1)/40))
@@ -534,8 +534,9 @@ def demo_trace_dipole_earth_unstructured_file():
     print('Total field lines: ', str(cnt))
     
     return
+
 if __name__ == "__main__":
     demo_two_traces()
     demo_trace_dipole_earth_function()
     demo_trace_dipole_earth_unstructured()
-    # demo_trace_dipole_earth_unstructured_file()
+    demo_trace_dipole_earth_unstructured_file()
