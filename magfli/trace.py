@@ -7,12 +7,6 @@ Created on Sun May 22 20:09:52 2022
 """
 
 import numpy as np
-from scipy.integrate import solve_ivp
-from scipy.interpolate import RegularGridInterpolator
-from scipy.interpolate import LinearNDInterpolator
-from scipy.interpolate import NearestNDInterpolator
-import types
-import logging
 
 def trace_stop_earth(s, X, xmin, ymin, zmin, xmax, ymax, zmax):
     """Event function used by solve_ivp.  We check to see if we're outside the

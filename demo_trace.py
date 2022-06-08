@@ -107,8 +107,8 @@ def demo_trace_dipole_earth_function():
     mt = mf.multitrace_cartesian_function( Xmin, Xmax,
                                    Field_Function = mf.dipole_earth_cartesian,
                                    Stop_Function = mf.trace_stop_earth_box, 
-                                   tol = 1e-5, grid_spacing = 0.1, max_length = 5, 
-                                   method_ode = 'RK23' )
+                                   tol = 1e-4, grid_spacing = 0.1, max_length = 5, 
+                                   method_ode = 'DOP853' )
 
     # Internal function used for repetitive work
     def trace_and_plot(forward):
@@ -154,10 +154,11 @@ def demo_trace_dipole_earth_function():
     # lines coming in through the surface.  Start by defining x,y,z arrays 
     # defining points those surfaces, ignoring the edges.  Loop through the arrays
     
-    x = np.linspace(Xmin[0]+1,Xmax[0]-1,Xmax[0]-Xmin[0]-1)
-    y = np.linspace(Xmin[1]+1,Xmax[1]-1,Xmax[1]-Xmin[1]-1)
-    z = np.linspace(Xmin[1]+1,Xmax[2]-1,Xmax[2]-Xmin[2]-1)
+    x = np.linspace(Xmin[0]+1,Xmax[0]-1,10)
+    y = np.linspace(Xmin[1]+1,Xmax[1]-1,10)
+    z = np.linspace(Xmin[1]+1,Xmax[2]-1,10)
 
+    # Do full x-y plane top and bottom
     for xx in x:
         for yy in y:
             # Top surface
@@ -167,14 +168,16 @@ def demo_trace_dipole_earth_function():
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
-            X0 = [xx, yy, -Xmax[2]]
+            X0 = [xx, yy, Xmin[2]]
             # We want Bz > 0 for forward tracing (forward = True)
             forward = (mf.dipole_earth_cartesian(X0))[2] > 0
             # Trace field line
             trace_and_plot(forward)
 
+    # Do both x-y planes, but skip the very top and bottom.  Those
+    # points are already included in the x-y planes above.
     for xx in x:
-        for zz in z:
+        for zz in z[1:len(z)-1]:
             # Top surface
             X0 = [xx, Xmax[1], zz]
             # We want By < 0 for forward tracing (forward = True)
@@ -182,14 +185,16 @@ def demo_trace_dipole_earth_function():
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
-            X0 = [xx, -Xmax[1], zz]
+            X0 = [xx, Xmin[1], zz]
             # We want By > 0 for forward tracing (forward = True)
             forward = (mf.dipole_earth_cartesian(X0))[1] > 0
             # Trace field line
             trace_and_plot(forward)
 
-    for yy in y:
-        for zz in z:
+    # Do both y-z planes skipping the edges.  The edge points are already
+    # in the planes above.
+    for yy in y[1:len(y)-1]:
+        for zz in z[1:len(z)-1]:
             # Top surface
             X0 = [Xmax[0], yy, zz]
             # We want Bx < 0 for forward tracing (forward = True)
@@ -197,7 +202,7 @@ def demo_trace_dipole_earth_function():
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
-            X0 = [-Xmax[0], yy, zz]
+            X0 = [Xmin[0], yy, zz]
             # We want Bz > 0 for forward tracing (forward = True)
             forward = (mf.dipole_earth_cartesian(X0))[0] > 0
             # Trace field line
@@ -224,13 +229,13 @@ def demo_trace_dipole_earth_unstructured():
 
     """
     # Opposite corners of box bounding domain for solution
-    # This box is used in this demo.  We use trace_stop_earth)box that 
+    # This box is used in this demo.  We use trace_stop_earth_box that 
     # considers whether the trace is outside the earth and inside of the box.
     Xmin = [-6,-3,-3]
     Xmax = [6,3,3]
     
     # Get the unstructured grid defining the magnetic field, grid contains
-    # num_pts
+    # num_pts randomly located points
     num_pts = 100000
     X, Y, Z, Bx, By, Bz = mf.dipole_earth_cartesian_unstructured(Xmax,num_pts)
     
@@ -250,17 +255,13 @@ def demo_trace_dipole_earth_unstructured():
     #ax.view_init(azim=0, elev=90)
     ax.set_box_aspect(aspect = (2,1,1))
 
-    # We'll walk around northern hemisphere in 20 degree increments
-    # Note: forward has to be False in northern hemisphere for the call to 
-    # trace_field_line... so that the field line trace goes away from the earth
-    
-    # Setup multitrace
+    # Setup multitrace for tracing field lines
     mt = mf.multitrace_cartesian_unstructured( X, Y, Z, Bx, By, Bz,
                                    Stop_Function = mf.trace_stop_earth_box, 
-                                   tol = 1e-3, grid_spacing = 0.1, max_length = 5, 
-                                   method_ode = 'RK23', method_interp = 'nearest' )
+                                   tol = 1e-4, grid_spacing = 0.1, max_length = 5, 
+                                   method_ode = 'DOP853', method_interp = 'nearest' )
     
-    # Internal function used for repetitive work
+   # Internal function used for the repetitive work of tracing field lines
     def trace_and_plot(forward):
         # Trace field line
         field_line = mt.trace_field_line( X0, forward )
@@ -270,6 +271,10 @@ def demo_trace_dipole_earth_unstructured():
         
         return field_line
 
+    # We'll walk around northern hemisphere in 20 degree increments
+    # Note: forward has to be False in northern hemisphere for the call to 
+    # trace_field_line... so that the field line trace goes away from the earth
+    
     # Colatitude array in radians
     colatitude = np.deg2rad([20,30,40,60,80])
     # Longitude array in radians
@@ -282,6 +287,7 @@ def demo_trace_dipole_earth_unstructured():
     # field line
     southern = np.empty((0,3), float)
     
+    # Walk around northern hemisphere
     for col in colatitude:
         for long in longitude:
             # Point where trace begins
@@ -296,7 +302,6 @@ def demo_trace_dipole_earth_unstructured():
     # the northern hemisphere that terminated before returning to earth 
     # Note: forward has to be True in southern hemisphere.  Going forward
     # heads away from the earth
-    
     for X0 in southern:
         # Trace field line
         trace_and_plot(True)
@@ -305,11 +310,14 @@ def demo_trace_dipole_earth_unstructured():
     # Walk across surface of bounding box defined by Xmin and Xmax.  Trace field
     # lines coming in through the surface.  Start by defining x,y,z arrays 
     # defining points those surfaces, ignoring the edges.  Loop through the arrays
-    
-    x = np.linspace(Xmin[0]+1,Xmax[0]-1,Xmax[0]-Xmin[0]-1)
-    y = np.linspace(Xmin[1]+1,Xmax[1]-1,Xmax[1]-Xmin[1]-1)
-    z = np.linspace(Xmin[1]+1,Xmax[2]-1,Xmax[2]-Xmin[2]-1)
+    x = np.linspace(Xmin[0]+1,Xmax[0]-1,10)
+    y = np.linspace(Xmin[1]+1,Xmax[1]-1,10)
+    z = np.linspace(Xmin[1]+1,Xmax[2]-1,10)
 
+    # Do full x-y plane top and bottom
+    # Note: we determine which way to go along the line forward (+step) or
+    # not forward (-step) for each point.  We want the field line to grow
+    # into the bounding box
     for xx in x:
         for yy in y:
             # Top surface
@@ -319,14 +327,16 @@ def demo_trace_dipole_earth_unstructured():
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
-            X0 = [xx, yy, -Xmax[2]]
+            X0 = [xx, yy, Xmin[2]]
             # We want Bz > 0 for forward tracing (forward = True)
             forward = (mf.dipole_earth_cartesian(X0))[2] > 0
             # Trace field line
             trace_and_plot(forward)
 
+    # Do both x-z planes, but skip the very top and bottom rows of points.  
+    # Those points are already included in the x-y planes above.
     for xx in x:
-        for zz in z:
+        for zz in z[1:len(z)-1]:
             # Top surface
             X0 = [xx, Xmax[1], zz]
             # We want By < 0 for forward tracing (forward = True)
@@ -334,14 +344,16 @@ def demo_trace_dipole_earth_unstructured():
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
-            X0 = [xx, -Xmax[1], zz]
+            X0 = [xx, Xmin[1], zz]
             # We want By > 0 for forward tracing (forward = True)
             forward = (mf.dipole_earth_cartesian(X0))[1] > 0
             # Trace field line
             trace_and_plot(forward)
 
-    for yy in y:
-        for zz in z:
+    # Do both y-z planes skipping the edges.  The edge points are already
+    # in the planes above.
+    for yy in y[1:len(y)-1]:
+        for zz in z[1:len(z)-1]:
             # Top surface
             X0 = [Xmax[0], yy, zz]
             # We want Bx < 0 for forward tracing (forward = True)
@@ -349,7 +361,7 @@ def demo_trace_dipole_earth_unstructured():
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
-            X0 = [-Xmax[0], yy, zz]
+            X0 = [Xmin[0], yy, zz]
             # We want Bz > 0 for forward tracing (forward = True)
             forward = (mf.dipole_earth_cartesian(X0))[0] > 0
             # Trace field line
@@ -417,32 +429,32 @@ def demo_trace_dipole_earth_unstructured_file():
     ax.set_xlim(Xmin[0],Xmax[0])
     ax.set_ylim(Xmin[1],Xmax[1])
     ax.set_zlim(Xmin[2],Xmax[2])
-    #ax.view_init(azim=0, elev=90)
+    #ax.view_init(azim=180, elev=0)
     ax.set_box_aspect(aspect = (2,1,1))
-    #ax.set_box_aspect(aspect = (1,1,1))
+
+    # Setup multitrace for tracing field lines
+    mt = mf.multitrace_cartesian_unstructured( X, Y, Z, Bx, By, Bz,
+                                   Stop_Function = mf.trace_stop_earth_box, 
+                                   tol = 1e-4, grid_spacing = 0.1, max_length = 500, 
+                                   method_ode = 'DOP853', method_interp = 'nearest' )
+
+    # Internal function used for the repetitive work of tracing field lines
+    def trace_and_plot(forward):
+        # Trace field line
+        field_line = mt.trace_field_line( X0, forward )
+                
+        # Plot field line
+        ax.plot( field_line[0,:], field_line[1,:], field_line[2,:], color='blue' )
+ 
+        return field_line
 
     # We'll walk around northern hemisphere in 20 degree increments
     # Note: forward has to be False in northern hemisphere for the call to 
     # trace_field_line... so that the field line trace goes away from the earth
     
-    # Setup multitrace
-    mt = mf.multitrace_cartesian_unstructured( X, Y, Z, Bx, By, Bz,
-                                   Stop_Function = mf.trace_stop_earth_box, 
-                                   tol = 1e-3, grid_spacing = 1, max_length = 500, 
-                                   method_ode = 'RK23', method_interp = 'nearest' )
-
-    # Internal function used for repetitive work
-    def trace_and_plot(forward):
-        # Trace field line
-        field_line = mt.trace_field_line( X0, forward )
-
-        # Plot field line
-        ax.plot( field_line[0,:], field_line[1,:], field_line[2,:], color='blue' )
-
-        return field_line
-
     # Colatitude array in radians
     colatitude = np.deg2rad([20,30,40,60,80])
+    
     # Longitude array in radians
     longitude = np.deg2rad([0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 
                             220, 240, 260, 280, 300, 320, 340])
@@ -452,7 +464,8 @@ def demo_trace_dipole_earth_unstructured_file():
     # will want to start these from the southern hemisphere to "complete" the
     # field line
     southern = np.empty((0,3), float)
-    
+  
+    # Walk around northern hemisphere
     for col in colatitude:
         for long in longitude:
             # Point where trace begins
@@ -468,7 +481,6 @@ def demo_trace_dipole_earth_unstructured_file():
     # the northern hemisphere that terminated before returning to earth 
     # Note: forward has to be True in southern hemisphere to head away from the
     # earth
-    
     for X0 in southern:
         # Trace field line
         trace_and_plot(True)
@@ -477,55 +489,62 @@ def demo_trace_dipole_earth_unstructured_file():
     # Walk across surface of bounding box defined by Xmin and Xmax.  Trace field
     # lines coming in through the surface.  Start by defining x,y,z arrays 
     # defining points on the surfaces, ignoring the edges.  Loop through the arrays
-    
-    x = np.linspace(int(Xmin[0]+1),int(Xmax[0]-1),int((Xmax[0]-Xmin[0]-1)/40))
-    y = np.linspace(int(Xmin[1]+1),int(Xmax[1]-1),int((Xmax[1]-Xmin[1]-1)/40))
-    z = np.linspace(int(Xmin[2]+1),int(Xmax[2]-1),int((Xmax[2]-Xmin[2]-1)/40))
+    x = np.linspace(int(Xmin[0]+1),int(Xmax[0]-1),10)
+    y = np.linspace(int(Xmin[1]+1),int(Xmax[1]-1),10)
+    z = np.linspace(int(Xmin[2]+1),int(Xmax[2]-1),10)
 
+    # Do full x-y plane top and bottom
+    # Note: we determine which way to go along the line forward (+step) or
+    # not forward (-step) for each point.  We want the field line to grow
+    # into the bounding box
     for xx in x:
         for yy in y:
             # Top surface
             X0 = [xx, yy, Xmax[2]]
             # We want Bz < 0 for forward tracing (forward = True)
-            forward = (mf.dipole_earth_cartesian(X0))[2] < 0
+            forward = (mt.trace_magnetic_field(X0))[2] < 0
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
-            X0 = [xx, yy, -Xmax[2]]
+            X0 = [xx, yy, Xmin[2]]
             # We want Bz > 0 for forward tracing (forward = True)
-            forward = (mf.dipole_earth_cartesian(X0))[2] > 0
+            forward = (mt.trace_magnetic_field(X0))[2] > 0
             # Trace field line
             trace_and_plot(forward)
             cnt += 2
 
+    # Do both x-z planes, but skip the very top and bottom rows of points.  
+    # Those points are already included in the x-y planes above.
     for xx in x:
-        for zz in z:
+        for zz in z[1:len(z)-1]:
             # Top surface
             X0 = [xx, Xmax[1], zz]
             # We want By < 0 for forward tracing (forward = True)
-            forward = (mf.dipole_earth_cartesian(X0))[1] < 0
+            forward = (mt.trace_magnetic_field(X0))[1] < 0
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
-            X0 = [xx, -Xmax[1], zz]
+            X0 = [xx, Xmin[1], zz]
             # We want By > 0 for forward tracing (forward = True)
-            forward = (mf.dipole_earth_cartesian(X0))[1] > 0
+            forward = (mt.trace_magnetic_field(X0))[1] > 0
             # Trace field line
             trace_and_plot(forward)
             cnt += 2
 
-    for yy in y:
-        for zz in z:
+    # Do both y-z planes skipping the edges.  The edge points are already
+    # in the planes above.
+    for yy in y[1:len(y)-1]:
+        for zz in z[1:len(z)-1]:
             # Top surface
             X0 = [Xmax[0], yy, zz]
             # We want Bx < 0 for forward tracing (forward = True)
-            forward = (mf.dipole_earth_cartesian(X0))[0] < 0
+            forward = (mt.trace_magnetic_field(X0))[0] < 0
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
-            X0 = [-Xmax[0], yy, zz]
+            X0 = [Xmin[0], yy, zz]
             # We want Bz > 0 for forward tracing (forward = True)
-            forward = (mf.dipole_earth_cartesian(X0))[0] > 0
+            forward = (mt.trace_magnetic_field(X0))[0] > 0
             # Trace field line
             trace_and_plot(forward)
             cnt += 2
