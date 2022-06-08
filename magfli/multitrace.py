@@ -42,7 +42,6 @@ class multitrace_cartesian_function():
             grid_spacing = grid spacing for solve_ivp
             max_length = maximum length (s) of field line
             method_ode = solve_ivp algorithm, e.g., RK23, RK45, see solve_ivp for details
-            method_interp = interpolator method, 'linear' or 'nearest'
             
         Outputs:
             None.

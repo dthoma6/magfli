@@ -98,10 +98,6 @@ def demo_trace_dipole_earth_function():
     ax.set_zlim(Xmin[2],Xmax[2])
     #ax.view_init(azim=0, elev=90)
     ax.set_box_aspect(aspect = (2,1,1))
-
-    # We'll walk around northern hemisphere in 20 degree increments
-    # Note: forward has to be False in northern hemisphere for the call to 
-    # trace_field_line...
     
     # Setup multitrace
     mt = mf.multitrace_cartesian_function( Xmin, Xmax,
@@ -120,6 +116,10 @@ def demo_trace_dipole_earth_function():
         
         return field_line
 
+    # We'll walk around northern hemisphere in 20 degree increments
+    # Note: forward has to be False in northern hemisphere for the call to 
+    # trace_field_line...
+
     # Colatitude array in radians
     colatitude = np.deg2rad([20,30,40,60,80])
     # Longitude array in radians
@@ -132,6 +132,7 @@ def demo_trace_dipole_earth_function():
     # field line
     southern = np.empty((0,3), float)
     
+    # Walk around northern hemisphere
     for col in colatitude:
         for long in longitude:
             # Point where trace begins
@@ -159,6 +160,9 @@ def demo_trace_dipole_earth_function():
     z = np.linspace(Xmin[1]+1,Xmax[2]-1,10)
 
     # Do full x-y plane top and bottom
+    # Note: we determine which way to go along the line forward (+step) or
+    # not forward (-step) for each point.  We want the field line to grow
+    # into the bounding box
     for xx in x:
         for yy in y:
             # Top surface
@@ -174,10 +178,9 @@ def demo_trace_dipole_earth_function():
             # Trace field line
             trace_and_plot(forward)
 
-    # Do both x-y planes, but skip the very top and bottom.  Those
-    # points are already included in the x-y planes above.
+    # Do both x-z planes.
     for xx in x:
-        for zz in z[1:len(z)-1]:
+        for zz in z:
             # Top surface
             X0 = [xx, Xmax[1], zz]
             # We want By < 0 for forward tracing (forward = True)
@@ -191,10 +194,9 @@ def demo_trace_dipole_earth_function():
             # Trace field line
             trace_and_plot(forward)
 
-    # Do both y-z planes skipping the edges.  The edge points are already
-    # in the planes above.
-    for yy in y[1:len(y)-1]:
-        for zz in z[1:len(z)-1]:
+    # Do both y-z planes.
+    for yy in y:
+        for zz in z:
             # Top surface
             X0 = [Xmax[0], yy, zz]
             # We want Bx < 0 for forward tracing (forward = True)
@@ -314,7 +316,7 @@ def demo_trace_dipole_earth_unstructured():
     y = np.linspace(Xmin[1]+1,Xmax[1]-1,10)
     z = np.linspace(Xmin[1]+1,Xmax[2]-1,10)
 
-    # Do full x-y plane top and bottom
+    # Do both x-y planes, top and bottom.
     # Note: we determine which way to go along the line forward (+step) or
     # not forward (-step) for each point.  We want the field line to grow
     # into the bounding box
@@ -333,10 +335,9 @@ def demo_trace_dipole_earth_unstructured():
             # Trace field line
             trace_and_plot(forward)
 
-    # Do both x-z planes, but skip the very top and bottom rows of points.  
-    # Those points are already included in the x-y planes above.
+    # Do both x-z planes.
     for xx in x:
-        for zz in z[1:len(z)-1]:
+        for zz in z:
             # Top surface
             X0 = [xx, Xmax[1], zz]
             # We want By < 0 for forward tracing (forward = True)
@@ -350,10 +351,9 @@ def demo_trace_dipole_earth_unstructured():
             # Trace field line
             trace_and_plot(forward)
 
-    # Do both y-z planes skipping the edges.  The edge points are already
-    # in the planes above.
-    for yy in y[1:len(y)-1]:
-        for zz in z[1:len(z)-1]:
+    # Do both y-z planes.
+    for yy in y:
+        for zz in z:
             # Top surface
             X0 = [Xmax[0], yy, zz]
             # We want Bx < 0 for forward tracing (forward = True)
@@ -493,7 +493,7 @@ def demo_trace_dipole_earth_unstructured_file():
     y = np.linspace(int(Xmin[1]+1),int(Xmax[1]-1),10)
     z = np.linspace(int(Xmin[2]+1),int(Xmax[2]-1),10)
 
-    # Do full x-y plane top and bottom
+    # Do both x-y planes, top and bottom.
     # Note: we determine which way to go along the line forward (+step) or
     # not forward (-step) for each point.  We want the field line to grow
     # into the bounding box
@@ -513,10 +513,9 @@ def demo_trace_dipole_earth_unstructured_file():
             trace_and_plot(forward)
             cnt += 2
 
-    # Do both x-z planes, but skip the very top and bottom rows of points.  
-    # Those points are already included in the x-y planes above.
+    # Do both x-z planes.
     for xx in x:
-        for zz in z[1:len(z)-1]:
+        for zz in z:
             # Top surface
             X0 = [xx, Xmax[1], zz]
             # We want By < 0 for forward tracing (forward = True)
@@ -531,10 +530,9 @@ def demo_trace_dipole_earth_unstructured_file():
             trace_and_plot(forward)
             cnt += 2
 
-    # Do both y-z planes skipping the edges.  The edge points are already
-    # in the planes above.
-    for yy in y[1:len(y)-1]:
-        for zz in z[1:len(z)-1]:
+    # Do both y-z planes.
+    for yy in y:
+        for zz in z:
             # Top surface
             X0 = [Xmax[0], yy, zz]
             # We want Bx < 0 for forward tracing (forward = True)
@@ -554,8 +552,81 @@ def demo_trace_dipole_earth_unstructured_file():
     
     return
 
+def demo_spacing_on_box_surfaces():
+    """Demo function to look at options for exterior points on bounding box.
+
+    Inputs
+    -------
+    None.
+    
+    Returns
+    -------
+    None.
+
+    """
+    # Opposite corners of box bounding domain for solution
+    # This box is used in this demo.  We use trace_stop_earth_box that
+    # considers whether the trace is outside the earth and inside of the box.
+    Xmin = [-6,-3,-3]
+    Xmax = [6,3,3]
+    
+    # Setup plot for field lines
+    fig = plt.figure(figsize=(8,8), dpi=300)
+    ax = plt.axes(projection='3d')
+    ax.set_title('Test exterior points')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    ax.set_xlim(Xmin[0],Xmax[0])
+    ax.set_ylim(Xmin[1],Xmax[1])
+    ax.set_zlim(Xmin[2],Xmax[2])
+    #ax.view_init(azim=0, elev=90)
+    ax.set_box_aspect(aspect = (2,1,1))
+    
+    
+    # Walk across surface of bounding box defined by Xmin and Xmax.  Trace field
+    # lines coming in through the surface.  Start by defining x,y,z arrays 
+    # defining points those surfaces, ignoring the edges.  Loop through the arrays
+    
+    x = np.linspace(Xmin[0]+1,Xmax[0]-1,10)
+    y = np.linspace(Xmin[1]+1,Xmax[1]-1,10)
+    z = np.linspace(Xmin[1]+1,Xmax[2]-1,10)
+    
+    # Do both x-y planes, top and bottom
+    for xx in x:
+        for yy in y:
+             # Top surface
+             X0 = [xx, yy, Xmax[2]]
+             ax.scatter(X0[0], X0[1], X0[2], 'r')
+             # Bottom surface
+             X0 = [xx, yy, Xmin[2]]
+             ax.scatter(X0[0], X0[1], X0[2], 'r')  
+    
+    # Do both x-z planes.
+    for xx in x:
+        for zz in z:
+             # Top surface
+             X0 = [xx, Xmax[1], zz]
+             ax.scatter(X0[0], X0[1], X0[2], 'r')
+             # Bottom surface
+             X0 = [xx, Xmin[1], zz]
+             ax.scatter(X0[0], X0[1], X0[2], 'r')
+    
+    # Do both y-z planes. 
+    for yy in y:
+        for zz in z:
+             # Top surface
+             X0 = [Xmax[0], yy, zz]
+             ax.scatter(X0[0], X0[1], X0[2], 'r')
+             # Bottom surface
+             X0 = [Xmin[0], yy, zz]
+             ax.scatter(X0[0], X0[1], X0[2], 'r')
+
+    return
+
 if __name__ == "__main__":
     demo_two_traces()
     demo_trace_dipole_earth_function()
     demo_trace_dipole_earth_unstructured()
     demo_trace_dipole_earth_unstructured_file()
+    demo_spacing_on_box_surfaces()
