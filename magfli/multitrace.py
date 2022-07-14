@@ -6,7 +6,7 @@ Created on Sun Jun  5 20:29:49 2022
 @author: Dean Thomas
 """
 
-from magfli.trace import trace_stop_earth
+from magfli.trace_stop_funcs import trace_stop_earth
 from magfli.dipole import dipole_earth_cartesian
 from scipy.integrate import solve_ivp
 from scipy.interpolate import RegularGridInterpolator

@@ -12,7 +12,7 @@ from ..dipole import dipole_earth_cartesian, dipole_earth_spherical, \
                     dipole_earth_cartesian_regular_grid, \
                     dipole_earth_cartesian_unstructured, \
                     dipole_mag_line_delta_cartesian
-from ..trace import trace_stop_earth
+from ..trace_stop_funcs import trace_stop_earth
 from ..multitrace import multitrace_cartesian_function, \
                     multitrace_cartesian_regular_grid, \
                     multitrace_cartesian_unstructured
