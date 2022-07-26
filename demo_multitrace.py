@@ -502,13 +502,13 @@ def demo_trace_dipole_earth_unstructured_file():
             # Top surface
             X0 = [xx, yy, Xmax[2]]
             # We want Bz < 0 for forward tracing (forward = True)
-            forward = (mt.trace_magnetic_field(X0))[2] < 0
+            forward = (mt.trace_field_value(X0))[2] < 0
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
             X0 = [xx, yy, Xmin[2]]
             # We want Bz > 0 for forward tracing (forward = True)
-            forward = (mt.trace_magnetic_field(X0))[2] > 0
+            forward = (mt.trace_field_value(X0))[2] > 0
             # Trace field line
             trace_and_plot(forward)
             cnt += 2
@@ -519,13 +519,13 @@ def demo_trace_dipole_earth_unstructured_file():
             # Top surface
             X0 = [xx, Xmax[1], zz]
             # We want By < 0 for forward tracing (forward = True)
-            forward = (mt.trace_magnetic_field(X0))[1] < 0
+            forward = (mt.trace_field_value(X0))[1] < 0
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
             X0 = [xx, Xmin[1], zz]
             # We want By > 0 for forward tracing (forward = True)
-            forward = (mt.trace_magnetic_field(X0))[1] > 0
+            forward = (mt.trace_field_value(X0))[1] > 0
             # Trace field line
             trace_and_plot(forward)
             cnt += 2
@@ -536,17 +536,115 @@ def demo_trace_dipole_earth_unstructured_file():
             # Top surface
             X0 = [Xmax[0], yy, zz]
             # We want Bx < 0 for forward tracing (forward = True)
-            forward = (mt.trace_magnetic_field(X0))[0] < 0
+            forward = (mt.trace_field_value(X0))[0] < 0
             # Trace field line
             trace_and_plot(forward)
             # Bottom surface
             X0 = [Xmin[0], yy, zz]
             # We want Bz > 0 for forward tracing (forward = True)
-            forward = (mt.trace_magnetic_field(X0))[0] > 0
+            forward = (mt.trace_field_value(X0))[0] > 0
             # Trace field line
             trace_and_plot(forward)
             cnt += 2
         
+    print('Elapsed time:' + str( time.time() - start ))
+    print('Total field lines: ', str(cnt))
+    
+    return
+
+def demo_trace_dipole_earth_unstructured_file_line():
+    """Demo function to trace multiple field lines for a model of the  
+    earth's magnetic field specified by an unstructured grid from a
+    SWMF output file.  Solution must be outside of earth (i.e., r>1) and within 
+    the box bounding the domain. Start points for the field lines will be 
+    over a series of points along a line.
+
+    Inputs
+    -------
+    None.
+    
+    Returns
+    -------
+    None.
+
+    """
+    from os.path import exists
+    import swmfio as swmfio
+
+    # Location of SWMF file
+    tmpdir = '/Volumes/Physics HD/runs/DIPTSUR2/GM/IO2/'
+    filebase = '3d__var_2_e20190902-041400-000'
+        
+    print("Reading " + tmpdir + filebase + ".{tree, info, out}")
+    batsclass = swmfio.read_batsrus(tmpdir + filebase)
+    
+    # Get x, y, z and Bx, By, Bz from file
+    var_dict = dict(batsclass.varidx)
+    X = batsclass.data_arr[:,var_dict['x']][:]
+    Y = batsclass.data_arr[:,var_dict['y']][:]
+    Z = batsclass.data_arr[:,var_dict['z']][:]
+     
+    Bx = batsclass.data_arr[:,var_dict['bx']][:]
+    By = batsclass.data_arr[:,var_dict['by']][:]
+    Bz = batsclass.data_arr[:,var_dict['bz']][:]
+
+    # Opposite corners of box bounding domain for solution
+    # This box is used in this demo.  We use trace_stop_earth_box that 
+    # considers whether the trace is outside the earth and inside of the box.
+    Xmin = [min(X), min(Y), min(Z)]
+    Xmax = [max(X), max(Y), max(Z)]
+    
+    # Count the number of field lines 
+    cnt = 0
+    
+    # Time process
+    start = time.time()
+
+    # Setup plot for field lines
+    fig = plt.figure(figsize=(8,8), dpi=300)
+    ax = plt.axes(projection='3d')
+    ax.set_title(filebase)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    #ax.set_xlim(Xmin[0],Xmax[0])
+    #ax.set_ylim(Xmin[1],Xmax[1])
+    #ax.set_zlim(Xmin[2],Xmax[2])
+    ax.set_xlim(-10,10)
+    ax.set_ylim(-10,10)
+    ax.set_zlim(-10,10)
+    #ax.view_init(azim=180, elev=0)
+    #ax.set_box_aspect(aspect = (2,1,1))
+
+    # Setup multitrace for tracing field lines
+    mt = mf.multitrace_cartesian_unstructured( X, Y, Z, Bx, By, Bz,
+                                   Stop_Function = mf.trace_stop_earth_box, 
+                                   tol = 1e-4, grid_spacing = 0.1, max_length = 500, 
+                                   method_ode = 'RK45', method_interp = 'nearest' )
+
+    # Internal function used for the repetitive work of tracing field lines
+    def trace_and_plot(forward):
+        # Trace field line
+        field_line = mt.trace_field_line( X0, forward )
+                
+        # Plot field line
+        ax.plot( field_line[0,:], field_line[1,:], field_line[2,:], color='blue' )
+ 
+        return field_line
+
+    # Create the start points for the field lines.  10 points along a line
+    # from [-3, 0, 0] to [-10, 0, 0]
+    # We'll walk along line, and do integration in both the forward and backwards
+    # directions
+  
+    for x in range(10):
+        # Point where trace begins
+        X0 = [-3-x*7/9, 0, 0]
+        # Trace field line
+        field_line = trace_and_plot(True)
+        field_line = trace_and_plot(False)
+        cnt += 2
+            
     print('Elapsed time:' + str( time.time() - start ))
     print('Total field lines: ', str(cnt))
     
@@ -625,8 +723,9 @@ def demo_spacing_on_box_surfaces():
     return
 
 if __name__ == "__main__":
-    #demo_two_traces()
-    #demo_trace_dipole_earth_function()
-    #demo_trace_dipole_earth_unstructured()
-    #demo_trace_dipole_earth_unstructured_file()
+    # demo_two_traces()
+    # demo_trace_dipole_earth_function()
+    # demo_trace_dipole_earth_unstructured()
+    # demo_trace_dipole_earth_unstructured_file()
+    demo_trace_dipole_earth_unstructured_file_line()
     # demo_spacing_on_box_surfaces()

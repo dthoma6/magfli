@@ -19,4 +19,9 @@ from .trace_stop_funcs import trace_stop_earth, \
     trace_stop_box, trace_stop_earth_box, trace_stop_none
 from .multitrace import multitrace_cartesian_function, \
     multitrace_cartesian_regular_grid, \
-    multitrace_cartesian_unstructured
+    multitrace_cartesian_unstructured, \
+    multitrace_cartesian_unstructured_swmfio
+from .fieldlines import integrate_direction, \
+    fieldlines_cartesian_unstructured_BATSRUSfile, \
+    fieldlines_cartesian_unstructured_swmfio_BATSRUSfile, \
+    fieldlines_cartesian_unstructured_VTKfile
