@@ -14,7 +14,8 @@ install_requires = [
                         "pandas",
                         "numpy",
                         "joblib",
-                        "matplotlib"
+                        "matplotlib",
+                        "paraview"
                     ]
 
 setup(

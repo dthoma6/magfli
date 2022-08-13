@@ -145,7 +145,7 @@ def dipole_earth_cartesian_regular_grid(Xmax, grid_spacing):
     # Note, we want to avoid the origin, which causes a divide by zero
     # condition when calculating the B field.  So we adjust if necessary
     # by adding half the grid_spacing
-    xdel = ydel = zdel =0
+    xdel = ydel = zdel = 0
     if( np.mod(Xmax[0],grid_spacing) == 0 ): 
         logging.info('Modifying Xmax[0] to avoid origin')
         xdel = grid_spacing/2

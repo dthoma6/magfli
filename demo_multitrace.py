@@ -60,7 +60,6 @@ def demo_two_traces():
     ax.plot( field_line2[0,:], field_line2[1,:], field_line2[2,:] )
     
     return
-    
 
 def demo_trace_dipole_earth_function():
     """Demo function to trace multiple field lines for a simple dipole model 
@@ -650,82 +649,9 @@ def demo_trace_dipole_earth_unstructured_file_line():
     
     return
 
-def demo_spacing_on_box_surfaces():
-    """Demo function to look at options for exterior points on bounding box.
-
-    Inputs
-    -------
-    None.
-    
-    Returns
-    -------
-    None.
-
-    """
-    # Opposite corners of box bounding domain for solution
-    # This box is used in this demo.  We use trace_stop_earth_box that
-    # considers whether the trace is outside the earth and inside of the box.
-    Xmin = [-6,-3,-3]
-    Xmax = [6,3,3]
-    
-    # Setup plot for field lines
-    fig = plt.figure(figsize=(8,8), dpi=300)
-    ax = plt.axes(projection='3d')
-    ax.set_title('Test exterior points')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    ax.set_xlim(Xmin[0],Xmax[0])
-    ax.set_ylim(Xmin[1],Xmax[1])
-    ax.set_zlim(Xmin[2],Xmax[2])
-    #ax.view_init(azim=0, elev=90)
-    ax.set_box_aspect(aspect = (2,1,1))
-    
-    
-    # Walk across surface of bounding box defined by Xmin and Xmax.  Trace field
-    # lines coming in through the surface.  Start by defining x,y,z arrays 
-    # defining points those surfaces, ignoring the edges.  Loop through the arrays
-    
-    x = np.linspace(Xmin[0]+1,Xmax[0]-1,10)
-    y = np.linspace(Xmin[1]+1,Xmax[1]-1,5)
-    z = np.linspace(Xmin[1]+1,Xmax[2]-1,5)
-    
-    # Do both x-y planes, top and bottom
-    for xx in x:
-        for yy in y:
-             # Top surface
-             X0 = [xx, yy, Xmax[2]]
-             ax.scatter(X0[0], X0[1], X0[2], c='r')
-             # Bottom surface
-             X0 = [xx, yy, Xmin[2]]
-             ax.scatter(X0[0], X0[1], X0[2], c='r')  
-    
-    # Do both x-z planes.
-    for xx in x:
-        for zz in z:
-             # Top surface
-             X0 = [xx, Xmax[1], zz]
-             ax.scatter(X0[0], X0[1], X0[2], c='r')
-             # Bottom surface
-             X0 = [xx, Xmin[1], zz]
-             ax.scatter(X0[0], X0[1], X0[2], c='r')
-    
-    # Do both y-z planes. 
-    for yy in y:
-        for zz in z:
-             # Top surface
-             X0 = [Xmax[0], yy, zz]
-             ax.scatter(X0[0], X0[1], X0[2], c='r')
-             # Bottom surface
-             X0 = [Xmin[0], yy, zz]
-             ax.scatter(X0[0], X0[1], X0[2], c='r')
-
-    return
-
 if __name__ == "__main__":
-    # demo_two_traces()
-    # demo_trace_dipole_earth_function()
-    # demo_trace_dipole_earth_unstructured()
-    # demo_trace_dipole_earth_unstructured_file()
+    demo_two_traces()
+    demo_trace_dipole_earth_function()
+    demo_trace_dipole_earth_unstructured()
+    demo_trace_dipole_earth_unstructured_file()
     demo_trace_dipole_earth_unstructured_file_line()
-    # demo_spacing_on_box_surfaces()

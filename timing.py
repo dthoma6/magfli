@@ -130,24 +130,33 @@ def timing_trace_plots():
     results = pd.read_pickle("timing.pkl")
     
     # Add a few columns based on the data in the dataframe
-    results['tolerance'] = 10**results['log(tolerance)']
-    results['number points'] = 10**results['log(number points)']
-    results['grid size'] = 10**results['log(grid size)']
+    results['tolerance'] = 10.0**results['log(tolerance)']
+    results['number points'] = 10.0**results['log(number points)']
+    results['grid size'] = 10.0**results['log(grid size)']
     
     # Plot results to identify patterns
-    results.plot('number points','elapsed time (sec)',kind='scatter', logy=True, logx=True)
-    results.plot('number points','RMS',kind='scatter', logy=True, logx=True)
-    results.plot('tolerance','elapsed time (sec)',kind='scatter', logy=True, logx=True)
-    results.plot('tolerance','RMS',kind='scatter', logy=True, logx=True)
-    results.plot('grid size','elapsed time (sec)',kind='scatter', logy=True, logx=True)
-    results.plot('grid size','RMS',kind='scatter', logy=True, logx=True)
-    results.plot('method ode','elapsed time (sec)',kind='scatter', logy=True)
-    results.plot('method ode','RMS',kind='scatter', logy=True)
+    colors = {'linear':'red', 'nearest':'blue'}
+    results.plot('number points','elapsed time (sec)',kind='scatter', logy=True, logx=True, 
+                 color=results['method interpolation'].map(colors))
+    results.plot('number points','RMS',kind='scatter', logy=True, logx=True,
+                 color=results['method interpolation'].map(colors))
+    results.plot('tolerance','elapsed time (sec)',kind='scatter', logy=True, logx=True,
+                 color=results['method interpolation'].map(colors))
+    results.plot('tolerance','RMS',kind='scatter', logy=True, logx=True,
+                 color=results['method interpolation'].map(colors))
+    results.plot('grid size','elapsed time (sec)',kind='scatter', logy=True, logx=True,
+                 color=results['method interpolation'].map(colors))
+    results.plot('grid size','RMS',kind='scatter', logy=True, logx=True,
+                 color=results['method interpolation'].map(colors))
+    results.plot('method ode','elapsed time (sec)',kind='scatter', logy=True,
+                 color=results['method interpolation'].map(colors))
+    results.plot('method ode','RMS',kind='scatter', logy=True, 
+                 color=results['method interpolation'].map(colors))
     results.plot('method interpolation','elapsed time (sec)',kind='scatter', logy=True)
     results.plot('method interpolation','RMS',kind='scatter', logy=True)
 
     return
 
 if __name__ == "__main__":
-    timing_trace_unstructured()
+    #timing_trace_unstructured()
     timing_trace_plots()
