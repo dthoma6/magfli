@@ -656,6 +656,9 @@ def compare_methods_data():
     results = add_array_to_df( results, 'BATSRUS SWMFIO B Mag', BSmagB )
     results = add_array_to_df( results, 'BATSRUS SCIPY Measure', Bmeasure )
     
+    # Defragment results (because I added a LOT of columns) by copying it
+    results = results.copy()
+    
     results.to_pickle('compare_methods.pkl')
     
     return
