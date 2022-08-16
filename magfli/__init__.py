@@ -17,10 +17,6 @@ from .dipole import dipole_earth_spherical, dipole_earth_cartesian, \
     dipole_earth_cartesian_regular_grid, dipole_earth_cartesian_unstructured
 from .trace_stop_funcs import trace_stop_earth, \
     trace_stop_box, trace_stop_earth_box, trace_stop_none
-from .multitrace import multitrace_cartesian_function, \
-    multitrace_cartesian_regular_grid, \
-    multitrace_cartesian_unstructured, \
-    multitrace_cartesian_unstructured_swmfio
 from .fieldlines import integrate_direction, \
     fieldlines_cartesian_function, \
     fieldlines_cartesian_regular_grid, \

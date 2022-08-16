@@ -43,7 +43,7 @@ def timing_vary_unstructured_params(num_pts=100000, tolerance=1e-5,
     
     # Setup multitrace
     # Requires trace be outside the earth (see mf.trace_stop_earth)
-    mt = mf.multitrace_cartesian_unstructured( x, y, z, Bx, By, Bz,
+    mt = mf.fieldlines_cartesian_unstructured( x, y, z, Bx, By, Bz,
                                    Stop_Function = mf.trace_stop_earth, 
                                    tol = tolerance, 
                                    grid_spacing = grid, 
@@ -158,5 +158,5 @@ def timing_trace_plots():
     return
 
 if __name__ == "__main__":
-    #timing_trace_unstructured()
+    # timing_trace_unstructured()
     timing_trace_plots()

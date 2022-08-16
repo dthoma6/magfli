@@ -205,7 +205,7 @@ def get_mag_F(filename = None, fieldline = None, SWMFIO = True):
     n = np.shape(fieldline)[1]
     magF = np.zeros(n)
     for m in range(n):
-        magF[m] = np.linalg.norm(fl.trace_field_value(fieldline[:,m]))
+        magF[m] = np.linalg.norm(fl.field_value(fieldline[:,m]))
 
     return magF
 

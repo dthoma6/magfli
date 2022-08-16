@@ -30,9 +30,9 @@ def create_plot(title='Demo'):
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    # ax.set_xlim(-10,10)
-    # ax.set_ylim(-10,10)
-    # ax.set_zlim(-10,10)
+    ax.set_xlim(-10,10)
+    ax.set_ylim(-10,10)
+    ax.set_zlim(-10,10)
     
     #ax.view_init(azim=180, elev=0)
     #ax.set_box_aspect(aspect = (2,1,1))
@@ -128,6 +128,7 @@ def demo_dipole_earth_function():
     for i in range(num):
         # Plot field line
         ax.plot( fieldlines[i][0,:], fieldlines[i][1,:], fieldlines[i][2,:], color='blue' )
+
 
 def demo_dipole_earth_regular_grid():
     """Demo function to trace field line for a dipole magnetic field defined
@@ -445,11 +446,11 @@ def demo_paraview_VTK():
 
 
 if __name__ == "__main__":
-    # demo_dipole_earth_function()
-    # demo_dipole_earth_regular_grid()
-    # demo_dipole_earth_unstructured()
+    demo_dipole_earth_function()
+    demo_dipole_earth_regular_grid()
+    demo_dipole_earth_unstructured()
     # demo_BATSRUS()
     # demo_swmfio_BATSRUS()
     # demo_VTK()
-    demo_paraview_VTK()
+    # demo_paraview_VTK()
     

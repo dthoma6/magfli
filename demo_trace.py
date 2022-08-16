@@ -32,8 +32,8 @@ def demo_trace_function():
     Xmin = [-100,-100,-100]
     Xmax = [100,100,100]
     
-    # Setup multitrace
-    mt = mf.multitrace_cartesian_function( Xmin, Xmax,
+    # Setup fieldlines
+    mt = mf.fieldlines_cartesian_function( Xmin, Xmax,
                                    Field_Function = mf.dipole_earth_cartesian,
                                    Stop_Function = mf.trace_stop_earth, 
                                    tol = 1e-5, grid_spacing = 0.1, max_length = 5, 
@@ -83,8 +83,8 @@ def demo_trace_regular_grid():
     # Get the regular grid defining the magnetic field
     X, Y, Z, Bx, By, Bz = mf.dipole_earth_cartesian_regular_grid([5,5,5],0.1)
         
-    # Setup multitrace
-    mt = mf.multitrace_cartesian_regular_grid( X, Y, Z, Bx, By, Bz,
+    # Setup fieldlines
+    mt = mf.fieldlines_cartesian_regular_grid( X, Y, Z, Bx, By, Bz,
                                    Stop_Function = mf.trace_stop_earth, 
                                    tol = 1e-5, grid_spacing = 0.1, max_length = 5, 
                                    method_ode = 'RK23', method_interp = 'linear' )
@@ -133,8 +133,8 @@ def demo_trace_unstructured():
     # Get the unstructured array defining the magnetic field
     X, Y, Z, Bx, By, Bz = mf.dipole_earth_cartesian_unstructured([5,5,5],100000)
     
-    # Setup multitrace
-    mt = mf.multitrace_cartesian_unstructured( X, Y, Z, Bx, By, Bz,
+    # Setup fieldlines
+    mt = mf.fieldlines_cartesian_unstructured( X, Y, Z, Bx, By, Bz,
                                    Stop_Function = mf.trace_stop_earth, 
                                    tol = 1e-5, grid_spacing = 0.1, max_length = 5, 
                                    method_ode = 'RK23', method_interp = 'linear' )

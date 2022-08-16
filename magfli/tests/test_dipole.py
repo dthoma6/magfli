@@ -13,9 +13,9 @@ from ..dipole import dipole_earth_cartesian, dipole_earth_spherical, \
                     dipole_earth_cartesian_unstructured, \
                     dipole_mag_line_delta_cartesian
 from ..trace_stop_funcs import trace_stop_earth
-from ..multitrace import multitrace_cartesian_function, \
-                    multitrace_cartesian_regular_grid, \
-                    multitrace_cartesian_unstructured
+from ..fieldlines import fieldlines_cartesian_function, \
+                    fieldlines_cartesian_regular_grid, \
+                    fieldlines_cartesian_unstructured
 
 def test_dipole_fields():
     """Compare results from dipole_earth_cartsian and dipole_earth_spherical
@@ -82,8 +82,8 @@ def test_dipole_function_trace():
     Xmin = [-100,-100,-100]
     Xmax = [100,100,100]
 
-    # Setup multitrace
-    mt = multitrace_cartesian_function( Xmin, Xmax,
+    # Setup fieldlines
+    mt = fieldlines_cartesian_function( Xmin, Xmax,
                                    Field_Function = dipole_earth_cartesian,
                                    Stop_Function = trace_stop_earth, 
                                    tol = 1e-5, grid_spacing = 0.1, max_length = 5, 
@@ -126,8 +126,8 @@ def test_dipole_regular_grid_trace():
     # Get the regular grid defining the magnetic field
     [x, y, z, Bx, By, Bz] = dipole_earth_cartesian_regular_grid([5,5,5],0.1)
     
-    # Setup multitrace
-    mt = multitrace_cartesian_regular_grid( x, y, z, Bx, By, Bz,
+    # Setup fieldlines
+    mt = fieldlines_cartesian_regular_grid( x, y, z, Bx, By, Bz,
                                    Stop_Function = trace_stop_earth, 
                                    tol = 1e-5, grid_spacing = 0.1, max_length = 5, 
                                    method_ode = 'RK23', method_interp = 'linear' )
@@ -168,8 +168,8 @@ def test_dipole_unstructured_trace():
     # Get the regular grid defining the magnetic field
     [x, y, z, Bx, By, Bz] = dipole_earth_cartesian_unstructured([5,5,5],100000)
     
-    # Setup multitrace
-    mt = multitrace_cartesian_unstructured( x, y, z, Bx, By, Bz,
+    # Setup fieldlines
+    mt = fieldlines_cartesian_unstructured( x, y, z, Bx, By, Bz,
                                    Stop_Function = trace_stop_earth, 
                                    tol = 1e-5, grid_spacing = 0.1, max_length = 5, 
                                    method_ode = 'RK23', method_interp = 'linear' )

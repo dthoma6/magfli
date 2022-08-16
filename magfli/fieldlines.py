@@ -6,14 +6,16 @@ Created on Fri Jul 22 12:56:41 2022
 @author: Dean Thomas
 """
 
-from magfli.multitrace import multitrace_cartesian_function, \
-        multitrace_cartesian_regular_grid, \
-        multitrace_cartesian_unstructured, \
-        multitrace_cartesian_unstructured_swmfio
 from magfli.trace_stop_funcs import trace_stop_earth
 from magfli.dipole import dipole_earth_cartesian
 import types
 import logging
+
+from scipy.integrate import solve_ivp
+from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import LinearNDInterpolator
+from scipy.interpolate import NearestNDInterpolator
+import numpy as np
 
 from enum import Enum, auto
 class integrate_direction(Enum):
@@ -21,25 +23,11 @@ class integrate_direction(Enum):
     backward = auto()
     both = auto()
 
-# # https://docs.python.org/3/library/multiprocessing.html#using-a-pool-of-workers
-# def solve(self, num_startpts, n):
-#     logging.info("Working on start point {}".format(n))
-    
-#     # When both directions selected, put forward line at n and backward
-#     # line at n+num_pts
-    
-#     if( self.direction == integrate_direction.both ):
-#         self.fieldlines[n] = self.multitrace.trace_field_line(self.start_pts[n], True)
-#         self.fieldlines[n+num_startpts] = self.multitrace.trace_field_line(self.start_pts[n], False)
-#     else:      
-#         self.fieldlines[n] = self.multitrace.trace_field_line(self.start_pts[n], 
-#                                 self.direction == integrate_direction.forward)
-
 class fieldlines_base():
     """Base class for fieldline classes.  It includes all of the procedures
     common across the fieldlines classes.  Most of the changes should be to
-    __init__().  set_start_points() and trace_field_lines() will be unchanged
-    in most situations.
+    __init__().  set_start_points(), trace_field_line(), trace_field_lines(), 
+    and field_value() will be unchanged in most situations.
     """
     def __init__(self, Stop_Function = trace_stop_earth, 
                     tol = 1e-5, 
@@ -78,9 +66,24 @@ class fieldlines_base():
             assert isinstance(direction, integrate_direction)
         assert isinstance(Stop_Function, types.FunctionType)
         assert( method_ode == 'RK23' or method_ode == 'RK45' or method_ode == 'DOP853')
-
-        # Store inputs
         
+        # Store instance data
+        self.Stop_Function = Stop_Function
+        self.tol = tol
+        self.grid_spacing = grid_spacing
+        self.max_length = max_length
+        self.method_ode = method_ode
+        
+        # Tell solve_ivp that it should use the Stop_Function to terminate the 
+        # integration.  Our stop functions made sure that we stay within the 
+        # problem's domain.  See definitions of trace_stop_... in trace_stop_funcs.py.
+        self.Stop_Function.terminal = True
+        
+        # Initialize grid for s from 0 to max_length, solve_ivp starts at 
+        # s_grid[0] and runs until the end (unless aborted by Stop_Function).
+        # s is the distance down the field line.
+        self.s_grid = np.arange(0,max_length+grid_spacing,grid_spacing)
+                
         # Initialize the start points for the field line tracing, along
         # with whether we integrate forward, backwards, or both
         self.start_pts = start_pts
@@ -112,7 +115,7 @@ class fieldlines_base():
             None
         """
 
-        logging.info('Setting start points field line...')
+        logging.info('Setting start points for field line...')
 
         assert isinstance(start_pts, list)
         assert len(start_pts) >= 1
@@ -132,8 +135,68 @@ class fieldlines_base():
 
         return
     
+    # def trace_parallel_field_lines(self, n, m, forward):
+    #     """Used to implement tracing of field lines using multiple processors
+    #     Called by trace_field_lines.
+                    
+    #     Inputs:
+    #         n = index of start point for this field line
+    #         m = index of self.fieldlines where result will be stored
+    #         direforwardction = integrate forward (true) or backwards (false)
+            
+    #     Outputs:
+    #         m = index of self.fieldlines where result will be stored,
+    #             m is just passed through
+    #         fieldline = result from self.trace_field_line
+    #     """
+    #     logging.info('Tracing field lines in parallel...' + str(n) + ' ' +
+    #                   str(m) + ' ' + str(forward))
+        
+    #     return m, self.trace_field_line(self.start_pts[n], forward)
+        
+    def trace_field_line(self, X0, forward):
+        """Trace a single field line based on start point XO and the provided field.  
+        The field is defined by an regular grid of points (x,y,z) at which the 
+        field (Fx,Fy,Fz) is provided.  The algorithm uses solve_ivp to step 
+        along the field line
+        
+        Inputs:
+            X0 = point at which to start the field line integration
+            forward = proceed forward along field line (+step) or backwards (-step)
+            
+        Outputs:
+            field_line.y = x,y,z points along field line starting at X0
+        """
+       
+        logging.info('Tracing field line...' + str(X0) + ' ' + str(forward))
+                
+        # Function dXds is used by solve_ivp to solve ODE,
+        # dX/ds = dF/|F|, which is used for tracing field lines.
+        # X (position) and F (field) are vectors.
+        # s is the distance down the field line from initial point X0
+        def dXds( s,X, xmin, ymin, zmin, xmax, ymax, zmax ):
+            F = np.zeros(3)
+            F[0] = self.Fx_interpolate(X)
+            F[1] = self.Fy_interpolate(X)
+            F[2] = self.Fz_interpolate(X)
+            if( not forward ):
+                F = np.negative( F )
+            F_mag = np.linalg.norm(F)
+            return F/F_mag
+        
+        # Call solve_ivp to find field line
+        field_line = solve_ivp(fun=dXds, t_span=[self.s_grid[0], self.s_grid[-1]], 
+                        y0=X0, t_eval=self.s_grid, rtol=self.tol, 
+                        events=self.Stop_Function, method=self.method_ode,
+                        args = self.bounds)
+        
+        # Check for error
+        assert( field_line.status != -1 )
+        
+        return field_line.y
+
     def trace_field_lines(self):
-        """Trace field lines from each start point.  Trace will go forward,
+        """Trace multiple field lines from each start point.  Trace will go forward,
         backward, or both directions depending on the internal value of 
         direction.  Direction set during class initialization or by call to
         setstartpoints.
@@ -151,29 +214,51 @@ class fieldlines_base():
         for i in range(num_startpts):
             # Trace field line
             if(self.direction != integrate_direction.both):
-                self.fieldlines[i] = self.multitrace.trace_field_line(self.start_pts[i], 
+                self.fieldlines[i] = self.trace_field_line(self.start_pts[i], 
                                         self.direction == integrate_direction.forward)
             else:
-                self.fieldlines[i] = self.multitrace.trace_field_line(self.start_pts[i], True)
-                self.fieldlines[i+num_startpts] = self.multitrace.trace_field_line(self.start_pts[i], False)
+                self.fieldlines[i] = self.trace_field_line(self.start_pts[i], True)
+                self.fieldlines[i+num_startpts] = self.trace_field_line(self.start_pts[i], False)
  
-        # parallel = True
-        # if parallel:
-        #     import multiprocessing as mp
-        #     num_cores = mp.cpu_count()
-        #     num_cores = min(num_cores, num_startpts, 20)
-        #     logging.info(f'Parallel processing {num_startpts} field lines using {num_cores} cores')   
-        #     p = mp.Pool(num_cores)
-        #     n = range(num_startpts)
-        #     p.map(solve, self, num_startpts, n)
+        # # https://docs.python.org/3/library/multiprocessing.html#using-a-pool-of-workers
+
+        # # Trace field lines in parallel
+        # import multiprocessing as mp
+        
+        # pool = mp.Pool()
+        
+        # # if-else to consider whether we are tracing in one direction or both
+        # if(self.direction != integrate_direction.both):
+            
+        #     # Set up arguments for fieldlines in one direction
+        #     args = [(i, i, self.direction == integrate_direction.forward) 
+        #             for i in range(num_startpts)]
+            
+        #     # Create processes in pool for one direction
+        #     for result in pool.starmap( self.trace_parallel_field_lines, args ):
+        #         self.fieldlines[result[0]] = result[1]
+        #         print('Result0: ', result[0])
+
         # else:
-        #     logging.info(f'Serial processing {num_startpts} field lines')
-        #     for n in range(num_startpts):
-        #         solve(self, num_startpts, n)
+        #     # Set up arguments for fieldlines in forward direction (True)
+        #     args = [(i, i, True) for i in range(num_startpts)]
+
+        #     # Create processes in pool for forward direction
+        #     for result in pool.starmap( self.trace_parallel_field_lines, args ):
+        #         self.fieldlines[result[0]] = result[1]
+        #         print('Result1: ', result[0], result[1].shape)
+            
+        #     # Set up arguments for fieldlines for backwards direction (False)
+        #     args = [(i, i+num_startpts, False) for i in range(num_startpts)]
+
+        #     # Create processes in pool for forward direction
+        #     for result in pool.starmap( self.trace_parallel_field_lines, args ):
+        #         self.fieldlines[result[0]] = result[1]
+        #         print('Result2: ', result[0], result[1].shape)
 
         return self.fieldlines    
     
-    def trace_field_value(self, X):
+    def field_value(self, X):
         """Use the interpolator to estimate the field at point X.
          
         Inputs:
@@ -182,7 +267,54 @@ class fieldlines_base():
         Outputs:
             F[] = x,y,z components of field at point X
         """
-        return self.multitrace.trace_field_value(X)
+
+        F = np.zeros(3)
+        F[0] = self.Fx_interpolate(X)
+        F[1] = self.Fy_interpolate(X)
+        F[2] = self.Fz_interpolate(X)
+        
+        return F
+
+class f_interp():
+    """Class to enable the use of the function in place of an interpolator in  
+    class fieldlines_cartesian_function.  All it does is store
+    the info for the function to emulate an interpolator.  
+    
+    Note: the process is slightly inefficient.  It makes three calls to get
+    the x, y, and z components, when one is sufficient.  The inefficiency is 
+    ignored because it allows a lot of code to be reused.
+    """
+    def __init__(self, Field_Function = None, field = None):
+        """Initialize f_interp
+            
+        Inputs:
+            Field_Function = function to calculate field
+            field = supply x, y, or z component of field
+        Outputs:
+            None
+        """
+        assert isinstance(Field_Function, types.FunctionType)
+        assert( field == 'x' or field == 'y' or field == 'z')
+
+        self.Field_Function = Field_Function
+        self.field = field
+        
+        if( field == 'x' ): self.index = 0
+        if( field == 'y' ): self.index = 1
+        if( field == 'z' ): self.index = 2
+        return
+    
+    def interpolate(self, X):
+        """Determine applicable component of field at point X. 
+            
+        Inputs:
+            X = point (x,y,z) at which to evaluate field
+        Outputs:
+            Appropropriate component, as determined by self.index, of the field
+                at point X
+        """
+        F = self.Field_Function( X )
+        return F[self.index]
 
 class fieldlines_cartesian_function(fieldlines_base):
     """Trace multiple field lines through the provided field.  The field is 
@@ -236,22 +368,32 @@ class fieldlines_cartesian_function(fieldlines_base):
                       + ' ' + method_ode )
 
         # Verify other inputs
-        # assert isinstance(x, types.ndarray)
-        # assert isinstance(y, types.ndarray)
-        # assert isinstance(z, types.ndarray)
-        # assert isinstance(Fx, types.ndarray)
-        # assert isinstance(Fy, types.ndarray)
-        # assert isinstance(Fz, types.ndarray)
         assert isinstance(Field_Function, types.FunctionType)
-                       
-        # Initialize multitrace for tracing field lines
-        self.multitrace = multitrace_cartesian_function( Xmin, Xmax,
-                                        Field_Function = Field_Function,
-                                        Stop_Function = Stop_Function, 
-                                        tol = tol, grid_spacing = grid_spacing, 
-                                        max_length = max_length, 
-                                        method_ode = method_ode )
+        assert isinstance(Stop_Function, types.FunctionType)
+        assert( method_ode == 'RK23' or method_ode == 'RK45' or method_ode == 'DOP853')
+                      
+        # Store instance data
+        self.Xmin = Xmin
+        self.Xmax = Xmax
+        self.Field_Function = Field_Function
         
+        # Use function as an interpolator
+        # see f_interp class above for implementation
+        fx_interp = f_interp( Field_Function, 'x' )
+        fy_interp = f_interp( Field_Function, 'y' )
+        fz_interp = f_interp( Field_Function, 'z' )
+        
+        self.Fx_interpolate = fx_interp.interpolate
+        self.Fy_interpolate = fy_interp.interpolate
+        self.Fz_interpolate = fz_interp.interpolate
+        
+        # Define box that bounds the domain of the solution.
+        # Xmin and Xmax are opposite corners of box.  The bounds
+        # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
+        # of the trace_stop_... functions ignore these bounds.)
+        self.bounds = Xmin + Xmax
+                
         return
 
 class fieldlines_cartesian_regular_grid(fieldlines_base):
@@ -307,22 +449,28 @@ class fieldlines_cartesian_regular_grid(fieldlines_base):
                       + ' ' + method_ode + ' ' + method_interp )
 
         # Verify other inputs
-        # assert isinstance(x, types.ndarray)
-        # assert isinstance(y, types.ndarray)
-        # assert isinstance(z, types.ndarray)
-        # assert isinstance(Fx, types.ndarray)
-        # assert isinstance(Fy, types.ndarray)
-        # assert isinstance(Fz, types.ndarray)
         assert( method_interp == 'linear' or method_interp == 'nearest')
                        
-        # Initialize multitrace for tracing field lines
-        self.multitrace = multitrace_cartesian_regular_grid( x, y, z, Fx, Fy, Fz,
-                                        Stop_Function = Stop_Function, 
-                                        tol = tol, grid_spacing = grid_spacing, 
-                                        max_length = max_length, 
-                                        method_ode = method_ode, 
-                                        method_interp = method_interp )
+        # Store instance data
+        self.x = x
+        self.y = y
+        self.z = z
+        self.Fx = Fx
+        self.Fy = Fy
+        self.Fz = Fz
         
+        # Create interpolators for regular grid
+        self.Fx_interpolate = RegularGridInterpolator((x, y, z), Fx, method=method_interp)
+        self.Fy_interpolate = RegularGridInterpolator((x, y, z), Fy, method=method_interp)
+        self.Fz_interpolate = RegularGridInterpolator((x, y, z), Fz, method=method_interp)
+        
+        # Define box that bounds the domain of the solution.
+        # min and max are opposite corners of box.  The bounds
+        # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
+        # of the trace_stop_... functions ignore these bounds.)
+        self.bounds = [min(x), min(y), min(z)] + [max(x), max(y), max(z)]
+       
         return
 
 class fieldlines_cartesian_unstructured(fieldlines_base):
@@ -377,21 +525,33 @@ class fieldlines_cartesian_unstructured(fieldlines_base):
                       + ' ' + method_ode + ' ' + method_interp )
 
         # Verify other inputs
-        # assert isinstance(x, types.ndarray)
-        # assert isinstance(y, types.ndarray)
-        # assert isinstance(z, types.ndarray)
-        # assert isinstance(Fx, types.ndarray)
-        # assert isinstance(Fy, types.ndarray)
-        # assert isinstance(Fz, types.ndarray)
         assert( method_interp == 'linear' or method_interp == 'nearest')
                        
-        # Initialize multitrace for tracing field lines
-        self.multitrace = multitrace_cartesian_unstructured( x, y, z, Fx, Fy, Fz,
-                                        Stop_Function = Stop_Function, 
-                                        tol = tol, grid_spacing = grid_spacing, 
-                                        max_length = max_length, 
-                                        method_ode = method_ode, 
-                                        method_interp = method_interp )
+        # Store instance data
+        self.x = x
+        self.y = y
+        self.z = z
+        self.Fx = Fx
+        self.Fy = Fy
+        self.Fz = Fz
+        
+        # Create interpolators for unstructured data
+        # Use list(zip(...)) to convert x,y,z's => (x0,y0,z0), (x1,y1,z1), ...
+        if( method_interp == 'linear'):
+            self.Fx_interpolate = LinearNDInterpolator(list(zip(x, y, z)), Fx )
+            self.Fy_interpolate = LinearNDInterpolator(list(zip(x, y, z)), Fy )
+            self.Fz_interpolate = LinearNDInterpolator(list(zip(x, y, z)), Fz )
+        if( method_interp == 'nearest'):
+            self.Fx_interpolate = NearestNDInterpolator(list(zip(x, y, z)), Fx )
+            self.Fy_interpolate = NearestNDInterpolator(list(zip(x, y, z)), Fy )
+            self.Fz_interpolate = NearestNDInterpolator(list(zip(x, y, z)), Fz )
+ 
+        # Define box that bounds the domain of the solution.
+        # min and max are opposite corners of box.  The bounds
+        # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
+        # of the trace_stop_... functions ignore these bounds.)
+        self.bounds = [min(x), min(y), min(z)] + [max(x), max(y), max(z)]
         
         return
 
@@ -469,28 +629,75 @@ class fieldlines_cartesian_unstructured_BATSRUSfile(fieldlines_base):
         assert isinstance( Fz_field, str )
 
         import swmfio
-        batsclass = swmfio.read_batsrus(filename)
+        batsrus = swmfio.read_batsrus(filename)
+        assert( batsrus != None )
            
         # Extract x, y, z and Fx, Fy, Fz from file
-        var_dict = dict(batsclass.varidx)
-        x = batsclass.data_arr[:,var_dict[x_field]][:]
-        y = batsclass.data_arr[:,var_dict[y_field]][:]
-        z = batsclass.data_arr[:,var_dict[z_field]][:]
+        var_dict = dict(batsrus.varidx)
+        self.x = batsrus.data_arr[:,var_dict[x_field]][:]
+        self.y = batsrus.data_arr[:,var_dict[y_field]][:]
+        self.z = batsrus.data_arr[:,var_dict[z_field]][:]
             
-        Fx = batsclass.data_arr[:,var_dict[Fx_field]][:]
-        Fy = batsclass.data_arr[:,var_dict[Fy_field]][:]
-        Fz = batsclass.data_arr[:,var_dict[Fz_field]][:]
+        self.Fx = batsrus.data_arr[:,var_dict[Fx_field]][:]
+        self.Fy = batsrus.data_arr[:,var_dict[Fy_field]][:]
+        self.Fz = batsrus.data_arr[:,var_dict[Fz_field]][:]
             
-        # Initialize multitrace for tracing field lines
-        self.multitrace = multitrace_cartesian_unstructured( x, y, z, Fx, Fy, Fz,
-                                        Stop_Function = Stop_Function, 
-                                        tol = tol, grid_spacing = grid_spacing, 
-                                        max_length = max_length, 
-                                        method_ode = method_ode, 
-                                        method_interp = method_interp )
+        # Create interpolators for unstructured data
+        # Use list(zip(...)) to convert x,y,z's => (x0,y0,z0), (x1,y1,z1), ...
+        xyz = list(zip(self.x, self.y, self.z))
+        if( method_interp == 'linear'):
+            self.Fx_interpolate = LinearNDInterpolator( xyz, self.Fx )
+            self.Fy_interpolate = LinearNDInterpolator( xyz, self.Fy )
+            self.Fz_interpolate = LinearNDInterpolator( xyz, self.Fz )
+        if( method_interp == 'nearest'):
+            self.Fx_interpolate = NearestNDInterpolator( xyz, self.Fx )
+            self.Fy_interpolate = NearestNDInterpolator( xyz, self.Fy )
+            self.Fz_interpolate = NearestNDInterpolator( xyz, self.Fz )
+ 
+        # Define box that bounds the domain of the solution.
+        # min and max are opposite corners of box.  The bounds
+        # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
+        # of the trace_stop_... functions ignore these bounds.)
+        self.bounds = [min(self.x), min(self.y), min(self.z)] + \
+                    [max(self.x), max(self.y), max(self.z)]
         
         return
- 
+
+
+class b_interp():
+    """Class to enable the use of the swmfio interpolator in class 
+    fieldlines_cartesian_unstructured_swmfio_BATSRUSfile.  All it does is store
+    the info for the interpolator.
+    """
+    def __init__(self, batsrus = None, field = None):
+        """Initialize f_interp
+            
+        Inputs:
+            Field_Function = function to calculate field
+            field = supply x, y, or z component of field
+        Outputs:
+            None
+        """
+        assert( batsrus != None )
+        assert( field != None )
+
+        self.batsrus = batsrus
+        self.field = field
+        return
+    
+    def interpolate(self, X):
+        """interpolate to determine field at point X
+            
+        Inputs:
+            X = point (x,y,z) at which to evaluate field
+        Outputs:
+            Appropriate component, as determined by self.field, of the field
+                at point X
+        """
+        return self.batsrus.interpolate( X, self.field )
+    
+
 class fieldlines_cartesian_unstructured_swmfio_BATSRUSfile(fieldlines_base):
     """Trace multiple field lines through the provided field.  The field is 
     defined through unstructured grid stored in a BATSRUS file.  The grid is an
@@ -565,29 +772,43 @@ class fieldlines_cartesian_unstructured_swmfio_BATSRUSfile(fieldlines_base):
         assert isinstance( Fz_field, str )
 
         import swmfio
-        batsclass = swmfio.read_batsrus(filename)
+        batsrus = swmfio.read_batsrus(filename)
+        assert( batsrus != None )
            
         # Extract x, y, z and Fx, Fy, Fz from file
-        var_dict = dict(batsclass.varidx)
-        x = batsclass.data_arr[:,var_dict[x_field]][:]
-        y = batsclass.data_arr[:,var_dict[y_field]][:]
-        z = batsclass.data_arr[:,var_dict[z_field]][:]
+        var_dict = dict(batsrus.varidx)
+        self.x = batsrus.data_arr[:,var_dict[x_field]][:]
+        self.y = batsrus.data_arr[:,var_dict[y_field]][:]
+        self.z = batsrus.data_arr[:,var_dict[z_field]][:]
             
-        Fx = batsclass.data_arr[:,var_dict[Fx_field]][:]
-        Fy = batsclass.data_arr[:,var_dict[Fy_field]][:]
-        Fz = batsclass.data_arr[:,var_dict[Fz_field]][:]
+        self.Fx = batsrus.data_arr[:,var_dict[Fx_field]][:]
+        self.Fy = batsrus.data_arr[:,var_dict[Fy_field]][:]
+        self.Fz = batsrus.data_arr[:,var_dict[Fz_field]][:]
 
-        # Initialize multitrace for tracing field lines
-        self.multitrace = multitrace_cartesian_unstructured_swmfio( x, y, z, Fx, Fy, Fz,
-                                        Stop_Function = Stop_Function, 
-                                        tol = tol, grid_spacing = grid_spacing, 
-                                        max_length = max_length, 
-                                        method_ode = method_ode, 
-                                        batsrus = batsclass,
-                                        Fx_field = Fx_field, 
-                                        Fy_field = Fy_field, 
-                                        Fz_field = Fz_field )
+        # Use swmfio interpolator
+        # see b_interp class above for implementation
+        bx_interp = b_interp( batsrus, Fx_field )
+        by_interp = b_interp( batsrus, Fy_field )
+        bz_interp = b_interp( batsrus, Fz_field )
         
+        self.Fx_interpolate = bx_interp.interpolate
+        self.Fy_interpolate = by_interp.interpolate
+        self.Fz_interpolate = bz_interp.interpolate
+
+        # Store instance data
+        self.batsrus = batsrus
+        self.Fx_field = Fx_field
+        self.Fy_field = Fy_field
+        self.Fz_field = Fz_field        
+        
+        # Define box that bounds the domain of the solution.
+        # min and max are opposite corners of box.  The bounds
+        # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
+        # of the trace_stop_... functions ignore these bounds.)
+        self.bounds = [min(self.x), min(self.y), min(self.z)] + \
+                    [max(self.x), max(self.y), max(self.z)]
+               
         return
 
 class fieldlines_cartesian_unstructured_VTKfile(fieldlines_base):
@@ -677,34 +898,46 @@ class fieldlines_cartesian_unstructured_VTKfile(fieldlines_base):
         
         # The field F at each cell center
         F = vn.vtk_to_numpy(data.GetCellData().GetArray(F_field))
-        Fx = F[:,0]
-        Fy = F[:,1]
-        Fz = F[:,2]
+        self.Fx = F[:,0]
+        self.Fy = F[:,1]
+        self.Fz = F[:,2]
         
         # We need the x,y,z locations of the cell centers.
         # If Cell_centers is str, we read them from the file.
         # If Cell_centers is None, we calculate them via VTK.  
         if( isinstance( cell_centers, str ) ):
             C = vn.vtk_to_numpy(data.GetCellData().GetArray(cell_centers))
-            x = C[:,0]
-            y = C[:,1]
-            z = C[:,2]
+            self.x = C[:,0]
+            self.y = C[:,1]
+            self.z = C[:,2]
         else:
             cellCenters = vtkCellCenters()
             cellCenters.SetInputDataObject(data)
             cellCenters.Update()
             Cpts = vn.vtk_to_numpy(cellCenters.GetOutput().GetPoints().GetData())
-            x = Cpts[:,0]
-            y = Cpts[:,1]
-            z = Cpts[:,2]
-        
-        # Initialize multitrace for tracing field lines
-        self.multitrace = multitrace_cartesian_unstructured( x, y, z, Fx, Fy, Fz,
-                                        Stop_Function = Stop_Function, 
-                                        tol = tol, grid_spacing = grid_spacing, 
-                                        max_length = max_length, 
-                                        method_ode = method_ode, 
-                                        method_interp = method_interp )
+            self.x = Cpts[:,0]
+            self.y = Cpts[:,1]
+            self.z = Cpts[:,2]
+                
+        # Create interpolators for unstructured data
+        # Use list(zip(...)) to convert x,y,z's => (x0,y0,z0), (x1,y1,z1), ...
+        xyz = list(zip(self.x, self.y, self.z))
+        if( method_interp == 'linear'):
+            self.Fx_interpolate = LinearNDInterpolator( xyz, self.Fx )
+            self.Fy_interpolate = LinearNDInterpolator( xyz, self.Fy )
+            self.Fz_interpolate = LinearNDInterpolator( xyz, self.Fz )
+        if( method_interp == 'nearest'):
+            self.Fx_interpolate = NearestNDInterpolator( xyz, self.Fx )
+            self.Fy_interpolate = NearestNDInterpolator( xyz, self.Fy )
+            self.Fz_interpolate = NearestNDInterpolator( xyz, self.Fz )
+ 
+        # Define box that bounds the domain of the solution.
+        # min and max are opposite corners of box.  The bounds
+        # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
+        # of the trace_stop_... functions ignore these bounds.)
+        self.bounds = [min(self.x), min(self.y), min(self.z)] + \
+                    [max(self.x), max(self.y), max(self.z)]
         
         return
     
