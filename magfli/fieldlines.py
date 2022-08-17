@@ -99,6 +99,9 @@ class fieldlines_base():
             else:
                 self.fieldlines = [None]*2*len(start_pts)
                 
+        # Initialize place to store field lines in VTK polydata
+        self.vtk_polydata = None
+        
         return
     
     def set_start_points(self, start_pts=None, 
@@ -274,6 +277,103 @@ class fieldlines_base():
         F[2] = self.Fz_interpolate(X)
         
         return F
+    
+    def convert_to_vtk(self):
+        """Convert the field lines to VTK format.
+         
+        Inputs:
+            None
+             
+        Outputs:
+            Returns -1 on err, 0 on success
+        """
+        from paraview import vtk as vtk
+
+        # Make sure that we have field lines to convert
+        if( self.fieldlines == None ):
+            logging.info('Before converting, use trace_field_lines to create field line data')
+            return -1
+       
+        # We need to loop through all n field lines
+        n = len(self.fieldlines)
+        
+        # Create storage for VTK data
+        vtk_points = vtk.vtkPoints()
+        vtk_polylines = [None] * n
+        vtk_cellarray = vtk.vtkCellArray()
+        k = 0
+        
+        # Loop through each field line
+        for i in range(n):
+            
+            # Create a new vtkPolyLine for each field line
+            vtk_polylines[i] = vtk.vtkPolyLine()
+            polyline_pid = vtk_polylines[i].GetPointIds()
+            
+            # Loop through the points in the ith field line
+            # Add the points to the vtkPoints structure
+            # Note, we have one vtkPoints for all the field lines.
+            # The different field lines are captured with the 
+            # vtkPolyLines structure, which stores the start and end points
+            # for each field line.
+            m = self.fieldlines[i].shape[1]
+
+            for j in range(m):
+                # Note: VTK field lines are the transpose of the field lines
+                # stored here
+                vtk_points.InsertNextPoint(*tuple(self.fieldlines[i][:,j].T))
+                polyline_pid.InsertNextId(k+j)
+            
+            # Since we append the i+1 field line to the end of the i field line
+            # in vtk_points, we need to keep track of k (total points after the
+            # ith field lines) so that the index in vtk_polyline is correct. 
+            k = k+j+1
+            
+            # For the ith field line add the polylines info to the ith cell
+            vtk_cellarray.InsertNextCell(vtk_polylines[i])
+
+        # Put the data into a vtkPolyData structure
+        self.vtk_polydata = vtk.vtkPolyData()
+        self.vtk_polydata.SetPoints(vtk_points)
+        self.vtk_polydata.SetLines(vtk_cellarray)
+        
+        return 0
+    
+    def write_vtk_to_file(self, filename = None):
+        """Write field line data to VTK file.
+         
+        Inputs:
+            None
+             
+        Outputs:
+            Returns -1 on err, 0 on success
+        """
+        from vtk import vtkPolyDataWriter
+        import os
+       
+        if( self.vtk_polydata == None ):
+            logging.info('Before saving data, use create_to_vtk to create VTK data')
+            return -1
+        
+        if( filename == None ):
+            logging.info('Valid filename to store vtk_polydata must be provided')
+            return -1
+        
+        if( not filename.endswith('.vtk') ):
+           logging.info('Filename ending in .vtk expected')
+           return -1
+        
+        path = os.path.dirname(filename)
+        if( not os.path.isdir(path) ):  
+            logging.info('Filename must contain a path to a valid directory')
+            return -1
+        
+        # Everything looks OK, so write data to file
+        writer = vtkPolyDataWriter()
+        writer.SetInputData(self.vtk_polydata)
+        writer.SetFileName(filename)
+        writer.Write()
+        return 0
 
 class f_interp():
     """Class to enable the use of the function in place of an interpolator in  
@@ -1056,7 +1156,6 @@ class fieldlines_cartesian_unstructured_paraview_VTKfile():
         from paraview import servermanager as sm
         from paraview.vtk.util import numpy_support as vn
         from paraview import vtk as vtk
-        import matplotlib.pyplot as plt
     
         # Create a new 'Stream Tracer' using the F_field for tracing field lines
         streamTracer = pvs.StreamTracer(registrationName='StreamTracer1', 

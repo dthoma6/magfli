@@ -129,6 +129,8 @@ def demo_dipole_earth_function():
         # Plot field line
         ax.plot( fieldlines[i][0,:], fieldlines[i][1,:], fieldlines[i][2,:], color='blue' )
 
+    fl.convert_to_vtk()
+    fl.write_vtk_to_file('/Users/dean/Desktop/dipole_function.vtk')
 
 def demo_dipole_earth_regular_grid():
     """Demo function to trace field line for a dipole magnetic field defined
@@ -288,6 +290,9 @@ def demo_BATSRUS():
         # Plot field line
         ax.plot( fieldlines[i][0,:], fieldlines[i][1,:], fieldlines[i][2,:], color='blue' )
 
+    fl.convert_to_vtk()
+    fl.write_vtk_to_file('/Users/dean/Desktop/BATSRUS_scipy.vtk')
+
 def demo_swmfio_BATSRUS():
     """Demo function to trace field line for a magnetic field stored in
     a BATSRUS file.  
@@ -336,6 +341,9 @@ def demo_swmfio_BATSRUS():
     for i in range(num):
         # Plot field line
         ax.plot( fieldlines[i][0,:], fieldlines[i][1,:], fieldlines[i][2,:], color='blue' )
+
+    fl.convert_to_vtk()
+    fl.write_vtk_to_file('/Users/dean/Desktop/BATSRUS_swmfio.vtk')
 
 def demo_VTK():
     """Demo function to trace field line for a magnetic field stored in
@@ -446,9 +454,9 @@ def demo_paraview_VTK():
 
 
 if __name__ == "__main__":
-    demo_dipole_earth_function()
+    # demo_dipole_earth_function()
     demo_dipole_earth_regular_grid()
-    demo_dipole_earth_unstructured()
+    # demo_dipole_earth_unstructured()
     # demo_BATSRUS()
     # demo_swmfio_BATSRUS()
     # demo_VTK()
