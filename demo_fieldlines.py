@@ -452,7 +452,6 @@ def demo_paraview_VTK():
         # Plot field line
         ax.plot( fieldlines[i][0,:], fieldlines[i][1,:], fieldlines[i][2,:], color='blue' )
 
-
 if __name__ == "__main__":
     # demo_dipole_earth_function()
     demo_dipole_earth_regular_grid()

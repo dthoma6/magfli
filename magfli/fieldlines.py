@@ -254,7 +254,7 @@ class fieldlines_base():
         #     # Set up arguments for fieldlines for backwards direction (False)
         #     args = [(i, i+num_startpts, False) for i in range(num_startpts)]
 
-        #     # Create processes in pool for forward direction
+        #     # Create processes in pool for backwards direction
         #     for result in pool.starmap( self.trace_parallel_field_lines, args ):
         #         self.fieldlines[result[0]] = result[1]
         #         print('Result2: ', result[0], result[1].shape)
@@ -490,8 +490,8 @@ class fieldlines_cartesian_function(fieldlines_base):
         # Define box that bounds the domain of the solution.
         # Xmin and Xmax are opposite corners of box.  The bounds
         # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
-        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
-        # of the trace_stop_... functions ignore these bounds.)
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. 
+        # Some of the trace_stop_... functions ignore these bounds.)
         self.bounds = Xmin + Xmax
                 
         return
@@ -567,8 +567,8 @@ class fieldlines_cartesian_regular_grid(fieldlines_base):
         # Define box that bounds the domain of the solution.
         # min and max are opposite corners of box.  The bounds
         # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
-        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
-        # of the trace_stop_... functions ignore these bounds.)
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. 
+        # Some of the trace_stop_... functions ignore these bounds.)
         self.bounds = [min(x), min(y), min(z)] + [max(x), max(y), max(z)]
        
         return
@@ -649,8 +649,8 @@ class fieldlines_cartesian_unstructured(fieldlines_base):
         # Define box that bounds the domain of the solution.
         # min and max are opposite corners of box.  The bounds
         # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
-        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
-        # of the trace_stop_... functions ignore these bounds.)
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. 
+        # Some of the trace_stop_... functions ignore these bounds.)
         self.bounds = [min(x), min(y), min(z)] + [max(x), max(y), max(z)]
         
         return
@@ -757,8 +757,8 @@ class fieldlines_cartesian_unstructured_BATSRUSfile(fieldlines_base):
         # Define box that bounds the domain of the solution.
         # min and max are opposite corners of box.  The bounds
         # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
-        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
-        # of the trace_stop_... functions ignore these bounds.)
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. 
+        # Some of the trace_stop_... functions ignore these bounds.)
         self.bounds = [min(self.x), min(self.y), min(self.z)] + \
                     [max(self.x), max(self.y), max(self.z)]
         
@@ -904,8 +904,8 @@ class fieldlines_cartesian_unstructured_swmfio_BATSRUSfile(fieldlines_base):
         # Define box that bounds the domain of the solution.
         # min and max are opposite corners of box.  The bounds
         # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
-        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
-        # of the trace_stop_... functions ignore these bounds.)
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. 
+        # Some of the trace_stop_... functions ignore these bounds.)
         self.bounds = [min(self.x), min(self.y), min(self.z)] + \
                     [max(self.x), max(self.y), max(self.z)]
                
@@ -1034,8 +1034,8 @@ class fieldlines_cartesian_unstructured_VTKfile(fieldlines_base):
         # Define box that bounds the domain of the solution.
         # min and max are opposite corners of box.  The bounds
         # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
-        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. Some
-        # of the trace_stop_... functions ignore these bounds.)
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. 
+        # Some of the trace_stop_... functions ignore these bounds.)
         self.bounds = [min(self.x), min(self.y), min(self.z)] + \
                     [max(self.x), max(self.y), max(self.z)]
         
