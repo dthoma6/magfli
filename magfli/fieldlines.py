@@ -287,7 +287,7 @@ class fieldlines_base():
         Outputs:
             Returns -1 on err, 0 on success
         """
-        from paraview import vtk as vtk
+        from vtk import vtkPoints, vtkCellArray, vtkPolyLine, vtkPolyData
 
         # Make sure that we have field lines to convert
         if( self.fieldlines == None ):
@@ -298,16 +298,16 @@ class fieldlines_base():
         n = len(self.fieldlines)
         
         # Create storage for VTK data
-        vtk_points = vtk.vtkPoints()
+        vtk_points = vtkPoints()
         vtk_polylines = [None] * n
-        vtk_cellarray = vtk.vtkCellArray()
+        vtk_cellarray = vtkCellArray()
         k = 0
         
         # Loop through each field line
         for i in range(n):
             
             # Create a new vtkPolyLine for each field line
-            vtk_polylines[i] = vtk.vtkPolyLine()
+            vtk_polylines[i] = vtkPolyLine()
             polyline_pid = vtk_polylines[i].GetPointIds()
             
             # Loop through the points in the ith field line
@@ -333,10 +333,12 @@ class fieldlines_base():
             vtk_cellarray.InsertNextCell(vtk_polylines[i])
 
         # Put the data into a vtkPolyData structure
-        self.vtk_polydata = vtk.vtkPolyData()
+        self.vtk_polydata = vtkPolyData()
         self.vtk_polydata.SetPoints(vtk_points)
         self.vtk_polydata.SetLines(vtk_cellarray)
         
+        self.vtk_polydata.Modified()
+
         return 0
     
     def write_vtk_to_file(self, filename = None):
@@ -375,6 +377,109 @@ class fieldlines_base():
         writer.Write()
         return 0
 
+    def display_vtk(self, earth = True):
+        """Display VTK field lines.
+         
+        Inputs:
+            None
+             
+        Outputs:
+            Returns -1 on err, 0 on success
+        """
+        from vtk import vtkPolyDataMapper, vtkActor, vtkRenderer, vtkRenderWindow, \
+            vtkRenderWindowInteractor, vtkEarthSource, vtkSphereSource
+        from vtkmodules.vtkCommonColor import vtkNamedColors
+       
+        if( self.vtk_polydata == None ):
+            logging.info('Before displaying data, use create_to_vtk to create VTK data')
+            return -1
+        
+        # See example code at:
+        # https://kitware.github.io/vtk-examples/site/Python/GeometricObjects/CylinderExample/
+        
+        # The mapper is responsible for pushing the geometry into the graphics
+        # library. It may also do color mapping, if scalars or other
+        # attributes are defined.
+        polydataMapper = vtkPolyDataMapper()
+        polydataMapper.SetInputData(self.vtk_polydata)
+
+        # The actor is a grouping mechanism: besides the geometry (mapper), it
+        # also has a property, transformation matrix, and/or texture map.
+        # Here we set its color and rotate it.
+        polydataActor = vtkActor()
+        polydataActor.SetMapper(polydataMapper)
+        colors = vtkNamedColors()
+        polydataActor.GetProperty().SetColor(colors.GetColor3d("Tomato"))
+        polydataActor.RotateX(-90.0)
+        # polydataActor.RotateY(-45.0)
+
+        # Create the graphics structure. The renderer renders into the render
+        # window. The render window interactor captures mouse events and will
+        # perform appropriate camera or actor manipulation depending on the
+        # nature of the events.
+        ren = vtkRenderer()
+        renWin = vtkRenderWindow()
+        renWin.AddRenderer(ren)
+        iren = vtkRenderWindowInteractor()
+        iren.SetRenderWindow(renWin)
+
+        # Add the actors to the renderer, set the background and size
+        ren.AddActor(polydataActor)
+        ren.SetBackground(colors.GetColor3d("BkgColor"))
+        renWin.SetSize(1000, 1000)
+        renWin.SetWindowName('VTK Field Lines')
+
+        if( earth ):
+            # Add earth to image
+            # Start witn and earth source
+            earthSource = vtkEarthSource()
+            earthSource.OutlineOn()
+            earthSource.Update()
+            earthSource.SetRadius(1.0)
+            
+            # Create a sphere to map the earth onto
+            sphere = vtkSphereSource()
+            sphere.SetThetaResolution(100)
+            sphere.SetPhiResolution(100)
+            sphere.SetRadius(earthSource.GetRadius())
+            
+            # Create mappers and actors
+            earthMapper = vtkPolyDataMapper()
+            earthMapper.SetInputConnection(earthSource.GetOutputPort())
+            
+            earthActor = vtkActor()
+            earthActor.SetMapper(earthMapper)
+            earthActor.GetProperty().SetColor(colors.GetColor3d('Black'))
+            earthActor.RotateX(-90.0)
+            # earthActor.RotateY(45.0)
+            earthActor.RotateZ(240.0)
+            
+            sphereMapper = vtkPolyDataMapper()
+            sphereMapper.SetInputConnection(sphere.GetOutputPort())
+            
+            sphereActor = vtkActor()
+            sphereActor.SetMapper(sphereMapper)
+            sphereActor.GetProperty().SetColor(colors.GetColor3d('DeepSkyBlue'))
+            
+            # Add the actors to the scene
+            ren.AddActor(earthActor)
+            ren.AddActor(sphereActor)
+
+        # This allows the interactor to initalize itself. It has to be
+        # called before an event loop.
+        iren.Initialize()
+
+        # We'll zoom in a little by accessing the camera and invoking a "Zoom"
+        # method on it.
+        ren.ResetCamera()
+        ren.GetActiveCamera().Zoom(0.9)
+        renWin.Render()
+
+        # Start the event loop.
+        iren.Start()
+
+        return 0
+
 class f_interp():
     """Class to enable the use of the function in place of an interpolator in  
     class fieldlines_cartesian_function.  All it does is store
@@ -404,7 +509,7 @@ class f_interp():
         if( field == 'z' ): self.index = 2
         return
     
-    def interpolate(self, X):
+    def __call__(self, X):
         """Determine applicable component of field at point X. 
             
         Inputs:
@@ -483,9 +588,9 @@ class fieldlines_cartesian_function(fieldlines_base):
         fy_interp = f_interp( Field_Function, 'y' )
         fz_interp = f_interp( Field_Function, 'z' )
         
-        self.Fx_interpolate = fx_interp.interpolate
-        self.Fy_interpolate = fy_interp.interpolate
-        self.Fz_interpolate = fz_interp.interpolate
+        self.Fx_interpolate = fx_interp
+        self.Fy_interpolate = fy_interp
+        self.Fz_interpolate = fz_interp
         
         # Define box that bounds the domain of the solution.
         # Xmin and Xmax are opposite corners of box.  The bounds
@@ -764,7 +869,6 @@ class fieldlines_cartesian_unstructured_BATSRUSfile(fieldlines_base):
         
         return
 
-
 class b_interp():
     """Class to enable the use of the swmfio interpolator in class 
     fieldlines_cartesian_unstructured_swmfio_BATSRUSfile.  All it does is store
@@ -786,7 +890,7 @@ class b_interp():
         self.field = field
         return
     
-    def interpolate(self, X):
+    def __call__(self, X):
         """interpolate to determine field at point X
             
         Inputs:
@@ -797,7 +901,6 @@ class b_interp():
         """
         return self.batsrus.interpolate( X, self.field )
     
-
 class fieldlines_cartesian_unstructured_swmfio_BATSRUSfile(fieldlines_base):
     """Trace multiple field lines through the provided field.  The field is 
     defined through unstructured grid stored in a BATSRUS file.  The grid is an
@@ -891,9 +994,9 @@ class fieldlines_cartesian_unstructured_swmfio_BATSRUSfile(fieldlines_base):
         by_interp = b_interp( batsrus, Fy_field )
         bz_interp = b_interp( batsrus, Fz_field )
         
-        self.Fx_interpolate = bx_interp.interpolate
-        self.Fy_interpolate = by_interp.interpolate
-        self.Fz_interpolate = bz_interp.interpolate
+        self.Fx_interpolate = bx_interp
+        self.Fy_interpolate = by_interp
+        self.Fz_interpolate = bz_interp
 
         # Store instance data
         self.batsrus = batsrus
@@ -975,9 +1078,8 @@ class fieldlines_cartesian_unstructured_VTKfile(fieldlines_base):
         assert isinstance( F_field, str )
         assert (isinstance( cell_centers, str) or (cell_centers is None))
         
-        from vtk import vtkUnstructuredGridReader
-        from paraview.vtk import vtkCellCenters
-        from paraview.vtk.util import numpy_support as vn
+        from vtk import vtkUnstructuredGridReader, vtkCellCenters
+        from vtk.util import numpy_support as vn
         
         # Open VTK file which should contain an unstructured cartesian grid
         reader = vtkUnstructuredGridReader()
@@ -1040,7 +1142,6 @@ class fieldlines_cartesian_unstructured_VTKfile(fieldlines_base):
                     [max(self.x), max(self.y), max(self.z)]
         
         return
-    
     
 class fieldlines_cartesian_unstructured_paraview_VTKfile():
     """Trace multiple field lines through the provided field.  The field is 
