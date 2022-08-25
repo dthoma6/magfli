@@ -23,5 +23,6 @@ from .fieldlines import integrate_direction, \
     fieldlines_cartesian_unstructured, \
     fieldlines_cartesian_unstructured_BATSRUSfile, \
     fieldlines_cartesian_unstructured_swmfio_BATSRUSfile, \
+    fieldlines_cartesian_unstructured_VTK, \
     fieldlines_cartesian_unstructured_VTKfile, \
     fieldlines_cartesian_unstructured_paraview_VTKfile

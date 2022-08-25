@@ -138,25 +138,6 @@ class fieldlines_base():
 
         return
     
-    # def trace_parallel_field_lines(self, n, m, forward):
-    #     """Used to implement tracing of field lines using multiple processors
-    #     Called by trace_field_lines.
-                    
-    #     Inputs:
-    #         n = index of start point for this field line
-    #         m = index of self.fieldlines where result will be stored
-    #         direforwardction = integrate forward (true) or backwards (false)
-            
-    #     Outputs:
-    #         m = index of self.fieldlines where result will be stored,
-    #             m is just passed through
-    #         fieldline = result from self.trace_field_line
-    #     """
-    #     logging.info('Tracing field lines in parallel...' + str(n) + ' ' +
-    #                   str(m) + ' ' + str(forward))
-        
-    #     return m, self.trace_field_line(self.start_pts[n], forward)
-        
     def trace_field_line(self, X0, forward):
         """Trace a single field line based on start point XO and the provided field.  
         The field is defined by an regular grid of points (x,y,z) at which the 
@@ -186,12 +167,27 @@ class fieldlines_base():
                 F = np.negative( F )
             F_mag = np.linalg.norm(F)
             return F/F_mag
-        
+
         # Call solve_ivp to find field line
         field_line = solve_ivp(fun=dXds, t_span=[self.s_grid[0], self.s_grid[-1]], 
                         y0=X0, t_eval=self.s_grid, rtol=self.tol, 
                         events=self.Stop_Function, method=self.method_ode,
                         args = self.bounds)
+
+        # def stop_earth_box(s, X, xmin, ymin, zmin, xmax, ymax, zmax):
+        #     if( s == 0 ): return True
+        #     if( X[0] < xmin or X[0] > xmax ): return False
+        #     if( X[1] < ymin or X[1] > ymax ): return False
+        #     if( X[2] < zmin or X[2] > zmax ): return False
+        #     r = np.linalg.norm(X)
+        #     return r > 1
+        
+        # stop_earth_box.terminal = True
+        
+        # field_line = solve_ivp(fun=dXds, t_span=[self.s_grid[0], self.s_grid[-1]], 
+        #                 y0=X0, t_eval=self.s_grid, rtol=self.tol, 
+        #                 events=stop_earth_box, method=self.method_ode,
+        #                 args = self.bounds)
         
         # Check for error
         assert( field_line.status != -1 )
@@ -223,42 +219,6 @@ class fieldlines_base():
                 self.fieldlines[i] = self.trace_field_line(self.start_pts[i], True)
                 self.fieldlines[i+num_startpts] = self.trace_field_line(self.start_pts[i], False)
  
-        # # https://docs.python.org/3/library/multiprocessing.html#using-a-pool-of-workers
-
-        # # Trace field lines in parallel
-        # import multiprocessing as mp
-        
-        # pool = mp.Pool()
-        
-        # # if-else to consider whether we are tracing in one direction or both
-        # if(self.direction != integrate_direction.both):
-            
-        #     # Set up arguments for fieldlines in one direction
-        #     args = [(i, i, self.direction == integrate_direction.forward) 
-        #             for i in range(num_startpts)]
-            
-        #     # Create processes in pool for one direction
-        #     for result in pool.starmap( self.trace_parallel_field_lines, args ):
-        #         self.fieldlines[result[0]] = result[1]
-        #         print('Result0: ', result[0])
-
-        # else:
-        #     # Set up arguments for fieldlines in forward direction (True)
-        #     args = [(i, i, True) for i in range(num_startpts)]
-
-        #     # Create processes in pool for forward direction
-        #     for result in pool.starmap( self.trace_parallel_field_lines, args ):
-        #         self.fieldlines[result[0]] = result[1]
-        #         print('Result1: ', result[0], result[1].shape)
-            
-        #     # Set up arguments for fieldlines for backwards direction (False)
-        #     args = [(i, i+num_startpts, False) for i in range(num_startpts)]
-
-        #     # Create processes in pool for backwards direction
-        #     for result in pool.starmap( self.trace_parallel_field_lines, args ):
-        #         self.fieldlines[result[0]] = result[1]
-        #         print('Result2: ', result[0], result[1].shape)
-
         return self.fieldlines    
     
     def field_value(self, X):
@@ -682,7 +642,7 @@ class fieldlines_cartesian_unstructured(fieldlines_base):
     """Trace multiple field lines through the provided field.  The field is 
     defined through unstructured grid.  The grid is an array of points (x,y,z) 
     at which the field (Fx,Fy,Fz) is provided.  The locations of the x,y,z 
-    points is unconstrained.  Algorithm uses solve_ivp to step along the field line.  
+    points are unconstrained.  Algorithm uses solve_ivp to step along the field line.  
     """
 
     def __init__(self, x, y, z, Fx, Fy, Fz,
@@ -764,7 +724,7 @@ class fieldlines_cartesian_unstructured_BATSRUSfile(fieldlines_base):
     """Trace multiple field lines through the provided field.  The field is 
     defined through unstructured grid stored in a BATSRUS file.  The grid is an
     array of points (x,y,z) at which the field (Fx,Fy,Fz) is provided.  
-    The locations of the x,y,z points is unconstrained.  Algorithm uses 
+    The locations of the x,y,z points are unconstrained.  Algorithm uses 
     solve_ivp to step along the field line.  
     """
 
@@ -905,7 +865,7 @@ class fieldlines_cartesian_unstructured_swmfio_BATSRUSfile(fieldlines_base):
     """Trace multiple field lines through the provided field.  The field is 
     defined through unstructured grid stored in a BATSRUS file.  The grid is an
     array of points (x,y,z) at which the field (Fx,Fy,Fz) is provided.  
-    The locations of the x,y,z points is unconstrained.  Algorithm uses 
+    The locations of the x,y,z points are unconstrained.  Algorithm uses 
     solve_ivp to step along the field line.  
     """
 
@@ -1014,11 +974,123 @@ class fieldlines_cartesian_unstructured_swmfio_BATSRUSfile(fieldlines_base):
                
         return
 
+class fieldlines_cartesian_unstructured_VTK(fieldlines_base):
+    """Trace multiple field lines through the provided field.  The field is 
+    defined through a VTK unstructured grid (vtkUnstructuredGrid).  The grid is
+    an array of points (x,y,z) at which the field (Fx,Fy,Fz) is provided.  
+    The locations of the x,y,z points are unconstrained.  Algorithm uses 
+    solve_ivp to step along the field line.  
+    """
+
+    def __init__(self, vtkData = None,
+                    Stop_Function = trace_stop_earth, 
+                    tol = 1e-5, 
+                    grid_spacing = 0.01, 
+                    max_length = 100, 
+                    method_ode = 'RK23',
+                    method_interp = 'nearest',
+                    start_pts = None,
+                    direction = integrate_direction.forward,
+                    F_field = 'b',
+                    cell_centers = None):
+        
+        """Initialize fieldlines_cartesian_unstructured_VTK
+            
+        Inputs:
+            vtkData = vtkUnstructured Grid that includes x,y,z grid points and 
+                field F at center of cells
+            Stop_Function = decides whether to end solve_ivp early
+            tol = tolerence for solve_ivp
+            grid_spacing = grid spacing for solve_ivp
+            max_length = maximum length (s) of field line
+            method_ode = solve_ivp algorithm, e.g., RK23, RK45, see solve_ivp for details
+            method_interp = interpolator method, 'linear' or 'nearest'
+            start_pts = list of start points for starting integration, each
+                start point is nd.array with cartesian coordinates
+            direction = integrate forward, backward or both directions from
+                each start point, must be a member of enum integrate_direction
+            field = a string defining which cell array in the VTK file contains
+                data on the field F
+        Outputs:
+            None
+        """
+        super().__init__(Stop_Function, 
+                        tol, 
+                        grid_spacing, 
+                        max_length, 
+                        method_ode,
+                        start_pts,
+                        direction)
+        
+        logging.info('Initializing fieldlines for unstructured VTK grid: ' + str(tol) + 
+                      ' ' + str(grid_spacing) + ' ' + str(max_length) + ' ' + 
+                      method_ode + ' ' + method_interp)
+
+        # Store input variable
+        assert( vtkData is not None )
+        self.vtkData = vtkData
+
+        # Check other inputs
+        assert( method_interp == 'linear' or method_interp == 'nearest')
+        assert isinstance( F_field, str )
+        assert (isinstance( cell_centers, str) or (cell_centers is None))
+        
+        from vtk import vtkCellCenters
+        from vtk.util import numpy_support as vn
+        
+        # The x,y,z points in the unstructured grid are offset from
+        # the center of the cells.  
+
+        # The field F at each cell center
+        F = vn.vtk_to_numpy(vtkData.GetCellData().GetArray(F_field))
+        self.Fx = F[:,0]
+        self.Fy = F[:,1]
+        self.Fz = F[:,2]
+        
+        # We need the x,y,z locations of the cell centers.
+        # If Cell_centers is str, we read them from the vtkData.
+        # If Cell_centers is None, we calculate them via VTK.  
+        if( isinstance( cell_centers, str ) ):
+            C = vn.vtk_to_numpy(vtkData.GetCellData().GetArray(cell_centers))
+            self.x = C[:,0]
+            self.y = C[:,1]
+            self.z = C[:,2]
+        else:
+            cellCenters = vtkCellCenters()
+            cellCenters.SetInputDataObject(vtkData)
+            cellCenters.Update()
+            Cpts = vn.vtk_to_numpy(cellCenters.GetOutput().GetPoints().GetData())
+            self.x = Cpts[:,0]
+            self.y = Cpts[:,1]
+            self.z = Cpts[:,2]
+                
+        # Create interpolators for unstructured data
+        # Use list(zip(...)) to convert x,y,z's => (x0,y0,z0), (x1,y1,z1), ...
+        xyz = list(zip(self.x, self.y, self.z))
+        if( method_interp == 'linear'):
+            self.Fx_interpolate = LinearNDInterpolator( xyz, self.Fx )
+            self.Fy_interpolate = LinearNDInterpolator( xyz, self.Fy )
+            self.Fz_interpolate = LinearNDInterpolator( xyz, self.Fz )
+        if( method_interp == 'nearest'):
+            self.Fx_interpolate = NearestNDInterpolator( xyz, self.Fx )
+            self.Fy_interpolate = NearestNDInterpolator( xyz, self.Fy )
+            self.Fz_interpolate = NearestNDInterpolator( xyz, self.Fz )
+ 
+        # Define box that bounds the domain of the solution.
+        # min and max are opposite corners of box.  The bounds
+        # are given to Stop_function as xmin, ymin, zmin, xmax, ymax, 
+        # and zmax. (See trace_stop_... function definitions in trace_stop_funcs.py. 
+        # Some of the trace_stop_... functions ignore these bounds.)
+        self.bounds = [min(self.x), min(self.y), min(self.z)] + \
+                    [max(self.x), max(self.y), max(self.z)]
+        
+        return
+
 class fieldlines_cartesian_unstructured_VTKfile(fieldlines_base):
     """Trace multiple field lines through the provided field.  The field is 
     defined through unstructured grid stored in a VTK file.  The grid is an
     array of points (x,y,z) at which the field (Fx,Fy,Fz) is provided.  
-    The locations of the x,y,z points is unconstrained.  Algorithm uses 
+    The locations of the x,y,z points are unconstrained.  Algorithm uses 
     solve_ivp to step along the field line.  
     """
 
@@ -1062,9 +1134,9 @@ class fieldlines_cartesian_unstructured_VTKfile(fieldlines_base):
                         start_pts,
                         direction)
         
-        logging.info('Initializing fieldlines for unstructured VTK grid: ' + str(tol) + 
-                      ' ' + str(grid_spacing) + ' ' + str(max_length) + ' ' + 
-                      method_ode + ' ' + method_interp + ' ' + filename)
+        logging.info('Initializing fieldlines for unstructured VTK gridm (file): ' + 
+                     str(tol) + ' ' + str(grid_spacing) + ' ' + str(max_length) + ' ' + 
+                     method_ode + ' ' + method_interp + ' ' + filename)
 
         # Store input variable
         self.filename = filename
@@ -1092,11 +1164,7 @@ class fieldlines_cartesian_unstructured_VTKfile(fieldlines_base):
         data = reader.GetOutput()
 
         # The x,y,z points in the unstructured grid are offset from
-        # the center of the cells.  We don't use pts
-        #pts = vn.vtk_to_numpy(data.GetPoints().GetData())
-
-        # So we read the field F from the VTK file and use 
-        # vtkCellCenters to find the F x,y,z positions
+        # the center of the cells.  
         
         # The field F at each cell center
         F = vn.vtk_to_numpy(data.GetCellData().GetArray(F_field))
@@ -1142,12 +1210,12 @@ class fieldlines_cartesian_unstructured_VTKfile(fieldlines_base):
                     [max(self.x), max(self.y), max(self.z)]
         
         return
-    
+        
 class fieldlines_cartesian_unstructured_paraview_VTKfile():
     """Trace multiple field lines through the provided field.  The field is 
     defined through unstructured grid stored in a VTK file.  The grid is an
     array of points (x,y,z) at which the field (Fx,Fy,Fz) is provided.  
-    The locations of the x,y,z points is unconstrained.  Algorithm uses 
+    The locations of the x,y,z points are unconstrained.  Algorithm uses 
     Paraview's StreamTracer to step along the field line.  
     """
     
