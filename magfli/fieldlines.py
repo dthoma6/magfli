@@ -65,7 +65,8 @@ class fieldlines_base():
         if direction != None:
             assert isinstance(direction, integrate_direction)
         assert isinstance(Stop_Function, types.FunctionType)
-        assert( method_ode == 'RK23' or method_ode == 'RK45' or method_ode == 'DOP853')
+        assert( method_ode == 'RK23' or method_ode == 'RK45' or method_ode == 'DOP853' 
+              or method_ode == 'Radau' or method_ode == 'BDF' or method_ode == 'LSODA' )
         
         # Store instance data
         self.Stop_Function = Stop_Function
@@ -154,6 +155,11 @@ class fieldlines_base():
        
         logging.info('Tracing field line...' + str(X0) + ' ' + str(forward))
                 
+        # We need to make a copy of the Stop_Function for multiprocessing
+        from copy import deepcopy
+        stopfunc = deepcopy(self.Stop_Function)
+        stopfunc.terminal = True
+
         # Function dXds is used by solve_ivp to solve ODE,
         # dX/ds = dF/|F|, which is used for tracing field lines.
         # X (position) and F (field) are vectors.
@@ -167,31 +173,19 @@ class fieldlines_base():
                 F = np.negative( F )
             F_mag = np.linalg.norm(F)
             return F/F_mag
-
+        
         # Call solve_ivp to trace field line
         field_line = solve_ivp(fun=dXds, t_span=[self.s_grid[0], self.s_grid[-1]], 
-                        y0=X0, t_eval=self.s_grid, rtol=self.tol, 
-                        events=self.Stop_Function, method=self.method_ode,
+                        y0=X0, t_eval=self.s_grid, rtol=self.tol,
+                        events=stopfunc, method=self.method_ode,
                         args = self.bounds)
         
-        ####### This code block replaces the above call to solve_ivp 
-        ####### in multiprocessing.
-        # # We need to make a copy of the stop function for multiprocessing
-        # import copy
-        # stopfunc = copy.deepcopy(self.Stop_Function)
-        # stopfunc.terminal = True
-        
-        # # Call solve_ivp to trace field line for multiprocessing
-        # field_line = solve_ivp(fun=dXds, t_span=[self.s_grid[0], self.s_grid[-1]], 
-        #                 y0=X0, t_eval=self.s_grid, rtol=self.tol, 
-        #                 events=stopfunc, method=self.method_ode,
-        #                 args = self.bounds)
-        
-        # logging.info('End field line...' + str(X0) + ' ' + str(forward))
         
         # Check for error
         assert( field_line.status != -1 )
         
+        logging.info('End field line...' + str(X0) + ' ' + str(forward))
+
         return field_line.y
 
     def trace_field_lines(self):
@@ -204,12 +198,13 @@ class fieldlines_base():
             None
             
         Outputs:
-            None
+            Field lines
         """
         logging.info('Tracing field lines...')
 
         num_startpts = len(self.start_pts)
         
+        # Loop through all the start points
         for i in range(num_startpts):
             # Trace field line
             if(self.direction != integrate_direction.both):
@@ -221,6 +216,62 @@ class fieldlines_base():
  
         return self.fieldlines    
     
+    def trace_mp_field_lines(self): 
+        """Use multiprocessing to trace multiple field lines from each start 
+        point.  Trace will go forward, backward, or both directions depending 
+        on the internal value of direction.  Direction set during class 
+        initialization or by call to setstartpoints.
+            
+        Inputs:
+            None
+            
+        Outputs:
+            Field lines
+        """
+        logging.info('Tracing field lines with multiprocessing...')
+
+   
+        # Trace field lines in using a multiprocessing pool
+        import multiprocessing as mp
+        pool = mp.Pool()
+    
+        num_startpts = len(self.start_pts)
+        j = 0       # Counter for storing field lines
+        
+        # if-else to consider whether we are tracing in one direction or both
+        if(self.direction != integrate_direction.both):
+           
+            # Set up arguments for call to trace_field_line
+            args = [(self.start_pts[i], self.direction == integrate_direction.forward) 
+                    for i in range(num_startpts)]
+           
+            # Create processes in pool for selected direction
+            for result in pool.starmap( self.trace_field_line, args ):
+                self.fieldlines[j] = result
+                j = j + 1
+    
+        else:
+            # Set up arguments for fieldlines in forward direction (True)
+            args = [(self.start_pts[i], True) for i in range(num_startpts)]
+    
+            # Create processes in pool for forward direction
+            for result in pool.starmap( self.trace_field_line, args ):
+                self.fieldlines[j] = result
+                j = j + 1
+    
+           
+            # Set up arguments for fieldlines for backwards direction (False)
+            args = [(self.start_pts[i], False) 
+                    for i in range(num_startpts)]
+    
+            # Create processes in pool for backward direction
+            for result in pool.starmap( self.trace_field_line, args ):
+                self.fieldlines[j] = result
+                j = j + 1
+    
+    
+        return self.fieldlines
+
     def field_value(self, X):
         """Use the interpolator to estimate the field at point X.
          
@@ -439,7 +490,7 @@ class fieldlines_base():
         iren.Start()
 
         return 0
-
+        
 class f_interp():
     """Class to enable the use of the function in place of an interpolator in  
     class fieldlines_cartesian_function.  All it does is store
@@ -531,7 +582,8 @@ class fieldlines_cartesian_function(fieldlines_base):
         # Verify other inputs
         assert isinstance(Field_Function, types.FunctionType)
         assert isinstance(Stop_Function, types.FunctionType)
-        assert( method_ode == 'RK23' or method_ode == 'RK45' or method_ode == 'DOP853')
+        assert( method_ode == 'RK23' or method_ode == 'RK45' or method_ode == 'DOP853' 
+               or method_ode == 'Radau' or method_ode == 'BDF' or method_ode == 'LSODA' )
                       
         # Store instance data
         self.Xmin = Xmin

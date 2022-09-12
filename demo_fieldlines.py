@@ -116,8 +116,9 @@ def demo_dipole_earth_function():
     fl.set_start_points(start_pts, mf.integrate_direction.both)
     
     # Trace field lines
-    fieldlines = fl.trace_field_lines()
-    
+    # fieldlines = fl.trace_field_lines()
+    fieldlines = fl.trace_mp_field_lines()
+   
     print('Elapsed time:' + str( time.time() - start ))
     
     # Setup plot for field lines
@@ -129,8 +130,8 @@ def demo_dipole_earth_function():
         # Plot field line
         ax.plot( fieldlines[i][0,:], fieldlines[i][1,:], fieldlines[i][2,:], color='blue' )
 
-    fl.convert_to_vtk()
-    fl.write_vtk_to_file('/Users/dean/Desktop/dipole_function.vtk')
+    # fl.convert_to_vtk()
+    # fl.write_vtk_to_file('/Users/dean/Desktop/dipole_function.vtk')
 
 def demo_dipole_earth_regular_grid():
     """Demo function to trace field line for a dipole magnetic field defined
@@ -169,7 +170,8 @@ def demo_dipole_earth_regular_grid():
                     direction = mf.integrate_direction.both )    
     
     # Trace field lines
-    fieldlines = fl.trace_field_lines()
+    # fieldlines = fl.trace_field_lines()
+    fieldlines = fl.trace_mp_field_lines()
     
     print('Elapsed time:' + str( time.time() - start ))
     
@@ -182,8 +184,8 @@ def demo_dipole_earth_regular_grid():
         # Plot field line
         ax.plot( fieldlines[i][0,:], fieldlines[i][1,:], fieldlines[i][2,:], color='blue' )
        
-    fl.convert_to_vtk()
-    fl.display_vtk( earth = True )
+    # fl.convert_to_vtk()
+    # fl.display_vtk( earth = True )
 
 def demo_dipole_earth_unstructured():
     """Demo function to trace field line for a dipole magnetic field defined by
@@ -232,7 +234,8 @@ def demo_dipole_earth_unstructured():
     
     # Trace field lines
     fieldlines = fl.trace_field_lines()
-    
+    # fieldlines = fl.trace_mp_field_lines()
+
     print('Elapsed time:' + str( time.time() - start ))
     
     # Setup plot for field lines
@@ -272,7 +275,7 @@ def demo_BATSRUS():
                     tol = 1e-5, 
                     grid_spacing = 0.01, 
                     max_length = 100, 
-                    method_ode = 'RK23',
+                    method_ode = 'DOP853',
                     method_interp = 'nearest',
                     start_pts = None,
                     direction = None )
@@ -280,7 +283,8 @@ def demo_BATSRUS():
     fl.set_start_points(start_pts, mf.integrate_direction.both)
     
     # Setup multitrace for tracing field lines
-    fieldlines = fl.trace_field_lines()
+    # fieldlines = fl.trace_field_lines()
+    fieldlines = fl.trace_mp_field_lines()
     
     print('Elapsed time:' + str( time.time() - start ))
     
@@ -293,8 +297,8 @@ def demo_BATSRUS():
         # Plot field line
         ax.plot( fieldlines[i][0,:], fieldlines[i][1,:], fieldlines[i][2,:], color='blue' )
 
-    fl.convert_to_vtk()
-    fl.write_vtk_to_file('/Users/dean/Desktop/BATSRUS_scipy.vtk')
+    # fl.convert_to_vtk()
+    # fl.write_vtk_to_file('/Users/dean/Desktop/BATSRUS_scipy.vtk')
     # fl.display_vtk()
 
 def demo_swmfio_BATSRUS():
@@ -334,6 +338,7 @@ def demo_swmfio_BATSRUS():
     
     # Setup multitrace for tracing field lines
     fieldlines = fl.trace_field_lines()
+    # fieldlines = fl.trace_mp_field_lines()
     
     print('Elapsed time:' + str( time.time() - start ))
     
@@ -346,9 +351,9 @@ def demo_swmfio_BATSRUS():
         # Plot field line
         ax.plot( fieldlines[i][0,:], fieldlines[i][1,:], fieldlines[i][2,:], color='blue' )
 
-    fl.convert_to_vtk()
-    fl.write_vtk_to_file('/Users/dean/Desktop/BATSRUS_swmfio.vtk')
-    # fl.display_vtk()
+    # fl.convert_to_vtk()
+    # fl.write_vtk_to_file('/Users/dean/Desktop/BATSRUS_swmfio.vtk')
+    # # fl.display_vtk()
 
 def demo_VTK():
     """Demo function to trace field line for a magnetic field stored in
@@ -377,7 +382,7 @@ def demo_VTK():
                     tol = 1e-5, 
                     grid_spacing = 0.01, 
                     max_length = 100, 
-                    method_ode = 'RK23',
+                    method_ode = 'DOP853',
                     method_interp = 'nearest',
                     start_pts = None,
                     direction = None,
@@ -388,6 +393,7 @@ def demo_VTK():
     
     # Setup multitrace for tracing field lines
     fieldlines = fl.trace_field_lines()
+    # fieldlines = fl.trace_mp_field_lines()
     
     print('Elapsed time:' + str( time.time() - start ))
     
@@ -400,6 +406,9 @@ def demo_VTK():
         # Plot field line
         ax.plot( fieldlines[i][0,:], fieldlines[i][1,:], fieldlines[i][2,:], color='blue' )
         
+    # fl.convert_to_vtk()
+    # fl.display_vtk()
+
 def demo_paraview_VTK():
     """Demo function to trace field line for a magnetic field stored in
     a VTK file.  
@@ -456,13 +465,14 @@ def demo_paraview_VTK():
     for i in range(num):
         # Plot field line
         ax.plot( fieldlines[i][0,:], fieldlines[i][1,:], fieldlines[i][2,:], color='blue' )
-
+    plt.savefig('/tmp/tmp.png')
+    
 if __name__ == "__main__":
-    demo_dipole_earth_function()
-    demo_dipole_earth_regular_grid()
+    # demo_dipole_earth_function()
+    # demo_dipole_earth_regular_grid()
     # demo_dipole_earth_unstructured()
     # demo_BATSRUS()
     # demo_swmfio_BATSRUS()
-    # demo_VTK()
+    demo_VTK()
     # demo_paraview_VTK()
-    
+     
