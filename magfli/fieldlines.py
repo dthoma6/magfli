@@ -161,7 +161,7 @@ class fieldlines_base():
         stopfunc.terminal = True
 
         # Function dXds is used by solve_ivp to solve ODE,
-        # dX/ds = dF/|F|, which is used for tracing field lines.
+        # dX/ds = F/|F|, which is used for tracing field lines.
         # X (position) and F (field) are vectors.
         # s is the distance down the field line from initial point X0
         def dXds( s, X, xmin, ymin, zmin, xmax, ymax, zmax ):
